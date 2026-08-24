@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Requests - PortalStore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <!-- Supabase Client SDK and Corrected Supabase Script Path -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  
+  <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans min-h-screen pb-24" x-data="requestsData()" x-init="init()" x-cloak>
+
+  <!-- NOTIFICATION TOAST -->
+  <div x-show="notification.show" 
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 transform -translate-y-2"
+       x-transition:enter-end="opacity-100 transform translate-y-0"
+       class="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 max-w-sm w-full px-4" x-cloak>
+    <div class="bg-gray-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center justify-between border border-gray-700">
+      <div class="flex items-center gap-2.5">
+        <span class="text-emerald-400 text-lg">🔔</span>
+        <p class="text-xs font-medium" x-text="notification.message"></p>
+      </div>
+      <button @click="notification.show = false" class="text-gray-400 hover:text-white text-xs font-bold px-2">✕</button>
+    </div>
+  </div>
+
+  <!-- ADMIN HEADER -->
+  <header class="bg-gray-900 text-white sticky top-0 z-20 shadow-md">
+    <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center font-bold text-white text-sm">💳</span>
+        <div>
+          <h1 class="font-bold text-sm tracking-wide">Admin Requests</h1>
+          <p class="text-[10px] text-gray-400">Review Transactions & Password Resets</p>
+        </div>
+      </div>
+      <a href="dashboard.html" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3.5 py-2 rounded-xl transition font-semibold">
+        ← Dashboard
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-md mx-auto p-4 space-y-6">
+
+    <!-- TAB SWITCHER -->
+    <div class="grid grid-cols-2 gap-2 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm">
+      <button @click="activeTab = 'transactions'" 
+              :class="activeTab === 'transactions' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'"
+              class="text-xs font-bold py-2.5 rounded-xl transition">
+        Transactions (<span x-text="pendingTransactions.length"></span>)
+      </button>
+      <button @click="activeTab = 'resets'" 
+              :class="activeTab === 'resets' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'"
+              class="text-xs font-bold py-2.5 rounded-xl transition">
+        Password Resets (<span x-text="pendingResets.length"></span>)
+      </button>
+    </div>
+
+    <!-- TRANSACTIONS SECTION -->
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4" x-show="activeTab === 'transactions'">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider">Pending Transaction Approvals</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Approve or reject requests submitted by users.</p>
+        </div>
+        <span class="text-xs bg-amber-50 text-amber-700 font-bold px-2.5 py-1 rounded-xl" x-text="`${pendingTransactions.length} Pending`"></span>
+      </div>
+
+      <template x-if="pendingTransactions.length === 0">
+        <div class="py-16 text-center space-y-2">
+          <span class="text-3xl">✨</span>
+          <p class="text-xs text-gray-400 font-medium">All caught up! No pending deposit or withdrawal requests.</p>
+        </div>
+      </template>
+
+      <div class="space-y-3">
+        <template x-for="tx in pendingTransactions" :key="tx.id">
+          <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase" 
+                      :class="tx.type && tx.type.toLowerCase() === 'deposit' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'" 
+                      x-text="tx.type"></span>
+                <p class="text-base font-black text-gray-800 mt-1" x-text="`₱${tx.amount}`"></p>
+                
+                <div class="mt-1.5 space-y-0.5">
+                  <p class="text-sm font-bold text-gray-900" x-text="tx.userName"></p>
+                  <p class="text-xs font-mono text-gray-500" x-text="tx.userPhone"></p>
+                </div>
+                
+                <template x-if="tx.ref_number || tx.method">
+                  <div class="mt-2 inline-block bg-white px-2.5 py-1 rounded-lg border border-gray-200 text-[11px] font-mono text-gray-700">
+                    <span class="text-gray-400 font-sans text-[10px]" x-text="tx.method ? `${tx.method}: ` : 'Ref: '"></span>
+                    <span class="font-bold" x-text="tx.ref_number || 'N/A'"></span>
+                  </div>
+                </template>
+              </div>
+              <span class="text-[10px] text-gray-400 font-medium" x-text="tx.date"></span>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2 border-t border-gray-200">
+              <button @click="approveTx(tx)" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-sm">
+                Approve
+              </button>
+              <button @click="openRejectModal(tx.id, 'tx')" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-sm">
+                Reject
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- PASSWORD RESET REQUESTS SECTION -->
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4" x-show="activeTab === 'resets'" x-cloak>
+      <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider">Password Reset Requests</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Handle security reset requests from users.</p>
+        </div>
+        <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-xl" x-text="`${pendingResets.length} Pending`"></span>
+      </div>
+
+      <template x-if="pendingResets.length === 0">
+        <div class="py-16 text-center space-y-2">
+          <span class="text-3xl">🔒</span>
+          <p class="text-xs text-gray-400 font-medium">No pending password reset requests.</p>
+        </div>
+      </template>
+
+      <div class="space-y-3">
+        <template x-for="req in pendingResets" :key="req.id">
+          <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 uppercase">Reset Request</span>
+                <div class="mt-2 space-y-0.5">
+                  <p class="text-sm font-bold text-gray-900" x-text="req.userName"></p>
+                  <p class="text-xs font-mono text-gray-600" x-text="req.phone"></p>
+                </div>
+              </div>
+              <span class="text-[10px] text-gray-400 font-medium" x-text="new Date(req.created_at).toLocaleDateString() + ' ' + new Date(req.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})"></span>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2 border-t border-gray-200">
+              <button @click="resolveReset(req.id, 'Resolved')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-sm">
+                Mark Resolved
+              </button>
+              <button @click="resolveReset(req.id, 'Dismissed')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-2.5 rounded-xl transition shadow-sm">
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- POP-UP MODAL NOTIFICATION -->
+  <div x-show="modal.show" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-gray-100">
+      <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-bold mx-auto">⚠️</div>
+      <div class="text-center space-y-1">
+        <h3 class="text-sm font-bold text-gray-800" x-text="modal.title"></h3>
+        <p class="text-xs text-gray-500 font-medium" x-text="modal.message"></p>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button @click="modal.show = false" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2.5 rounded-xl transition">Cancel</button>
+        <button @click="modal.action()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-sm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-3 z-20 max-w-md mx-auto shadow-lg">
+    <a href="dashboard.html" class="flex flex-col items-center text-[10px] font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">🏠</span>
+      <span class="mt-0.5">Dashboard</span>
+    </a>
+    <a href="overview.html" class="flex flex-col items-center text-[10px] font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">📊</span>
+      <span class="mt-0.5">Overview</span>
+    </a>
+    <a href="requests.html" class="flex flex-col items-center text-[10px] font-bold text-emerald-600 transition">
+      <span class="text-base">💳</span>
+      <span class="mt-0.5">Requests</span>
+    </a>
+    <a href="users.html" class="flex flex-col items-center text-[10px] font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">👥</span>
+      <span class="mt-0.5">Users</span>
+    </a>
+    <a href="bank.html" class="flex flex-col items-center text-[10px] font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">🏦</span>
+      <span class="mt-0.5">Bank</span>
+    </a>
+  </nav>
+
+  <script>
+    function requestsData() {
+      return {
+        activeTab: 'transactions',
+        transactions: [],
+        passwordResets: [],
+        notification: { show: false, message: '' },
+        modal: { show: false, title: '', message: '', action: () => {} },
+
+        get pendingTransactions() {
+          return this.transactions.filter(t => 
+            t.status && t.status.toLowerCase() === 'pending'
+          );
+        },
+
+        get pendingResets() {
+          return this.passwordResets.filter(r => 
+            !r.status || r.status.toLowerCase() === 'pending'
+          );
+        },
+
+        async init() {
+          if (!DB.isAdminLoggedIn()) {
+            window.location.href = '../login.html';
+            return;
+          }
+          await this.loadData();
+        },
+
+        async loadData() {
+          try {
+            const [txRes, userRes, resetRes] = await Promise.all([
+              supabaseClient.from('transactions').select('*').order('id', { ascending: false }),
+              supabaseClient.from('users').select('id, first_name, last_name, phone'),
+              supabaseClient.from('password_resets').select('*').order('id', { ascending: false })
+            ]);
+
+            const txData = txRes.data || [];
+            const usersData = userRes.data || [];
+            this.passwordResets = resetRes.data || [];
+
+            const userMap = {};
+            usersData.forEach(u => {
+              userMap[u.id] = u;
+            });
+
+            this.transactions = txData.map(tx => {
+              const matchedUser = userMap[tx.user_id] || {};
+              const fullName = `${matchedUser.first_name || ''} ${matchedUser.last_name || ''}`.trim();
+              return {
+                ...tx,
+                userName: fullName || tx.username || 'Unknown User',
+                userPhone: matchedUser.phone || tx.phone || 'No Phone Number'
+              };
+            });
+
+            this.passwordResets = this.passwordResets.map(req => {
+              const matchedUser = userMap[req.user_id] || {};
+              const fullName = `${matchedUser.first_name || ''} ${matchedUser.last_name || ''}`.trim();
+              return {
+                ...req,
+                userName: fullName || 'Account User',
+                phone: req.phone || matchedUser.phone || 'No Phone'
+              };
+            });
+
+          } catch (e) {
+            console.error("Error loading data:", e);
+          }
+        },
+
+        showToast(msg) {
+          this.notification.message = msg;
+          this.notification.show = true;
+          setTimeout(() => { this.notification.show = false; }, 4000);
+        },
+
+        async resolveReset(id, status) {
+          try {
+            const { error } = await supabaseClient
+              .from('password_resets')
+              .update({ status: status })
+              .eq('id', id);
+
+            if (error) {
+              alert('Error updating status: ' + error.message);
+            } else {
+              this.showToast(`Password reset request marked as ${status}.`);
+            }
+            await this.loadData();
+          } catch (e) {
+            console.error("Reset action error:", e);
+          }
+        },
+
+        async approveTx(tx) {
+          try {
+            await supabaseClient.from('transactions').update({ status: 'Approved' }).eq('id', tx.id);
+            if (tx.type && tx.type.toLowerCase() === 'deposit' && tx.user_id) {
+              const { data: userRecord } = await supabaseClient.from('users').select('balance').eq('id', tx.user_id).maybeSingle();
+              if (userRecord) {
+                const newBalance = parseFloat(userRecord.balance || 0) + parseFloat(tx.amount || 0);
+                await supabaseClient.from('users').update({ balance: newBalance }).eq('id', tx.user_id);
+              }
+            }
+            this.showToast('Transaction approved successfully.');
+            await this.loadData();
+          } catch (e) {
+            console.error("Approval error:", e);
+          }
+        },
+
+        openRejectModal(id, type) {
+          this.modal = {
+            show: true,
+            title: 'Reject Request',
+            message: 'Are you sure you want to reject this request?',
+            action: async () => {
+              if (type === 'tx') {
+                await supabaseClient.from('transactions').update({ status: 'Rejected' }).eq('id', id);
+                this.showToast('Transaction rejected.');
+              }
+              await this.loadData();
+              this.modal.show = false;
+            }
+          };
+        }
+      }
+    }
+  </script>
+</body>
+</html>

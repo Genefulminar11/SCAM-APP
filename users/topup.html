@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top Up Account - PortalStore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans pb-24" 
+      x-data="topUpData()" 
+      x-init="initSettings()"
+      x-cloak>
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-gray-100 sticky top-0 z-20">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="dashboard.html" class="text-xs text-emerald-600 font-bold flex items-center gap-1 hover:underline">
+        ← Back
+      </a>
+      <span class="font-bold text-gray-800 text-base">Top Up Account</span>
+      <div class="w-8"></div>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- STEP 1: SELECT DESTINATION ACCOUNT -->
+    <div class="space-y-2">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">1. Select Destination Account</p>
+      
+      <div class="space-y-3">
+        <template x-for="account in activeAccounts" :key="account.id">
+          <!-- CARD -->
+          <div @click="selectAndShowQR(account)"
+               :class="selectedAccount && selectedAccount.id === account.id ? 'ring-4 ring-emerald-400/40 shadow-md scale-[1.01]' : 'shadow-sm'"
+               class="bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800 text-white p-4 rounded-2xl space-y-3 cursor-pointer transition transform">
+            
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold uppercase tracking-wider text-emerald-100" x-text="account.name"></span>
+              <span class="text-[10px] bg-white/20 px-2.5 py-1 rounded-full font-bold" x-text="selectedAccount && selectedAccount.id === account.id ? 'Selected ✓' : 'Tap to View QR'"></span>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div class="space-y-2">
+                <div>
+                  <p class="text-[10px] text-emerald-200 uppercase tracking-wider font-bold">Account Name</p>
+                  <p class="text-sm font-bold tracking-wide" x-text="account.accountName"></p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-emerald-200 uppercase tracking-wider font-bold">Account / Mobile Number</p>
+                  <p class="text-base font-mono font-bold tracking-wider" x-text="account.accountNumber"></p>
+                </div>
+              </div>
+
+              <template x-if="account.qr">
+                <div class="bg-white p-1.5 rounded-xl shadow-sm">
+                  <img :src="account.qr" class="w-16 h-16 object-contain rounded-lg">
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Fallback if no admin accounts exist -->
+        <template x-if="activeAccounts.length === 0">
+          <div class="bg-white p-6 rounded-2xl border border-gray-100 text-center text-xs text-gray-400 shadow-sm">
+            No deposit accounts configured by admin yet.
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- STEP 2: SUBMIT PAYMENT DETAILS -->
+    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">2. Submit Payment Details</p>
+
+      <div x-show="errorMessage" x-text="errorMessage" class="p-3 bg-red-50 text-red-600 text-xs rounded-xl text-center border border-red-100 font-medium" x-cloak></div>
+      <div x-show="successMessage" x-text="successMessage" class="p-3 bg-green-50 text-green-600 text-xs rounded-xl text-center border border-green-100 font-medium" x-cloak></div>
+
+      <form @submit.prevent="handleTopUp()" class="space-y-3">
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-gray-700 block">Top Up Amount (₱)</label>
+          <input type="number" step="0.01" x-model="amount" placeholder="0.00" required 
+                 class="w-full p-3 rounded-xl border border-gray-200 text-xs font-bold focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-gray-700 block">Reference Number</label>
+          <input type="text" x-model="refNumber" placeholder="Enter Reference No." required 
+                 class="w-full p-3 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <button type="submit" :disabled="loading || !selectedAccount"
+                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-sm transition disabled:opacity-50 mt-2">
+          <span x-text="loading ? 'Submitting Request...' : 'Submit Deposit'"></span>
+        </button>
+      </form>
+    </div>
+
+  </main>
+
+  <!-- FULL QR CODE POPUP MODAL -->
+  <div x-show="showQrModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" x-cloak>
+    <div class="bg-white rounded-3xl w-full max-w-xs p-6 space-y-4 shadow-2xl text-center" @click.away="showQrModal = false">
+      <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+        <h3 class="font-bold text-gray-800 text-sm" x-text="modalAccount?.name"></h3>
+        <button @click="showQrModal = false" class="text-gray-400 hover:text-gray-600 font-bold text-base">✕</button>
+      </div>
+
+      <div class="space-y-2">
+        <p class="text-[11px] text-gray-400 font-medium">Scan QR Code using your banking app</p>
+        <div class="bg-gray-50 p-3 rounded-2xl border border-gray-100 inline-block mx-auto">
+          <template x-if="modalAccount?.qr">
+            <img :src="modalAccount.qr" class="w-48 h-48 object-contain rounded-xl mx-auto">
+          </template>
+          <template x-if="!modalAccount?.qr">
+            <div class="w-48 h-48 flex items-center justify-center text-gray-400 text-xs">No QR Code Available</div>
+          </template>
+        </div>
+      </div>
+
+      <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs space-y-1 text-left font-mono">
+        <div class="flex justify-between text-[11px]">
+          <span class="text-gray-400">Account No:</span>
+          <span class="font-bold text-gray-800" x-text="modalAccount?.accountNumber"></span>
+        </div>
+        <div class="flex justify-between text-[11px]">
+          <span class="text-gray-400">Name:</span>
+          <span class="font-bold text-gray-800" x-text="modalAccount?.accountName"></span>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-1">
+        <button @click="copyToClipboard(modalAccount?.accountNumber)" class="w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs transition">Copy Number</button>
+        <button @click="showQrModal = false" class="w-1/2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition">Select & Pay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-3 z-20 max-w-md mx-auto shadow-md">
+    <a href="dashboard.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">🏠</span><span class="mt-0.5">Home</span>
+    </a>
+    <a href="tasks.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">💼</span><span class="mt-0.5">Job</span>
+    </a>
+    <a href="records.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">💳</span><span class="mt-0.5">Records</span>
+    </a>
+    <a href="account.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">👤</span><span class="mt-0.5">Account</span>
+    </a>
+  </nav>
+
+  <script>
+    function topUpData() {
+      return {
+        allProviders: [
+          { id: 'maya', name: 'Maya' }, { id: 'gcash', name: 'GCash' }, { id: 'coins_ph', name: 'Coins PH' },
+          { id: 'grabpay', name: 'GrabPay' }, { id: 'paypal', name: 'PayPal' }, { id: 'bpi_direct_banko', name: 'BPI Direct BanKo' },
+          { id: 'tala_wallet', name: 'Tala Wallet' }, { id: 'dragonpay_credits', name: 'DragonPay Credits' }, { id: 'lazada_wallet', name: 'Lazada Wallet' },
+          { id: 'cliqq_pay', name: '7-11 CLIQQ Pay' }, { id: 'ml_wallet', name: 'ML Wallet' }, { id: 'trust_wallet', name: 'Trust Wallet' },
+          { id: 'bdo', name: 'BDO Unibank, Inc.' }, { id: 'landbank', name: 'Land Bank of the Philippines' }, { id: 'bpi', name: 'Bank of the Philippine Islands (BPI)' },
+          { id: 'metrobank', name: 'Metrobank' }, { id: 'chinabank', name: 'China Banking Corporation' }, { id: 'rcbc', name: 'RCBC' },
+          { id: 'security_bank', name: 'Security Bank' }, { id: 'pnb', name: 'Philippine National Bank' }, { id: 'dbp', name: 'DBP' },
+          { id: 'unionbank', name: 'UnionBank' }, { id: 'hsbc', name: 'HSBC' }, { id: 'bank_of_america', name: 'Bank of America' },
+          { id: 'citibank', name: 'CitiBank' }, { id: 'mufg_bank', name: 'MUFG Bank' }, { id: 'standard_chartered', name: 'Standard Chartered' },
+          { id: 'psbank', name: 'PSBank' }, { id: 'china_bank_savings', name: 'China Bank Savings' }, { id: 'city_savings_bank', name: 'City Savings Bank' },
+          { id: 'bank_of_makati', name: 'Bank of Makati' }, { id: 'allbank', name: 'AllBank' }, { id: 'bangko_kabayan', name: 'Bangko Kabayan' },
+          { id: 'bdo_network_bank', name: 'BDO Network Bank' }, { id: 'eastwest_rural_bank', name: 'EastWest Rural Bank' }, { id: 'card_bank', name: 'CARD Bank' },
+          { id: 'cebuana_rural_bank', name: 'Cebuana Lhuillier Rural Bank' }, { id: 'maya_bank', name: 'Maya Bank' }, { id: 'gotyme', name: 'GoTyme Bank' },
+          { id: 'uniondigital', name: 'UnionDigital Bank' }, { id: 'unobank', name: 'Unobank' }, { id: 'tonik', name: 'Tonik Digital Bank' }, { id: 'ofbank', name: 'OFBank' }
+        ],
+        activeAccounts: [],
+        selectedAccount: null,
+        modalAccount: null,
+        showQrModal: false,
+        amount: '',
+        refNumber: '',
+        errorMessage: '',
+        successMessage: '',
+        loading: false,
+
+        async initSettings() {
+          try {
+            const { data, error } = await supabaseClient.from('settings').select('*');
+            if (!error && data) {
+              let settingsMap = {};
+              data.forEach(item => { settingsMap[item.key] = item.value; });
+
+              let configured = [];
+              this.allProviders.forEach(provider => {
+                const nameKey = provider.id + '_name';
+                const numberKey = provider.id + '_number';
+                const qrKey = provider.id + '_qr';
+
+                if (settingsMap[nameKey] && settingsMap[numberKey]) {
+                  configured.push({
+                    id: provider.id,
+                    name: provider.name,
+                    accountName: settingsMap[nameKey],
+                    accountNumber: settingsMap[numberKey],
+                    qr: settingsMap[qrKey] || ''
+                  });
+                }
+              });
+
+              this.activeAccounts = configured;
+              if (this.activeAccounts.length > 0) {
+                this.selectedAccount = this.activeAccounts[0];
+              }
+            }
+          } catch (e) {
+            console.error("Could not load settings:", e);
+          }
+        },
+
+        selectAndShowQR(account) {
+          this.selectedAccount = account;
+          this.modalAccount = account;
+          this.showQrModal = true;
+        },
+
+        copyToClipboard(text) {
+          if (text) {
+            navigator.clipboard.writeText(text);
+            alert('Account number copied to clipboard!');
+          }
+        },
+
+        async handleTopUp() {
+          if (!this.selectedAccount) {
+            this.errorMessage = 'Please select a destination account.';
+            return;
+          }
+
+          this.errorMessage = '';
+          this.successMessage = '';
+          this.loading = true;
+
+          const paymentMethodName = `${this.selectedAccount.name} (${this.selectedAccount.accountNumber})`;
+
+          const result = await DB.requestTopUp(this.amount, this.refNumber, paymentMethodName);
+          
+          this.loading = false;
+
+          if (!result.success) {
+            this.errorMessage = result.message;
+            return;
+          }
+
+          this.successMessage = result.message;
+          this.amount = '';
+          this.refNumber = '';
+
+          setTimeout(() => {
+            window.location.href = 'records.html';
+          }, 1200);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

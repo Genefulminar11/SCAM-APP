@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - PortalStore</title>
+  
+  <!-- Local Bootstrap CSS -->
+  <link href="../css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <!-- Supabase & Database Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  
+  <!-- External Custom Stylesheet -->
+  <link rel="stylesheet" href="../style.css">
+  
+  <style>
+    @keyframes marquee {
+      0% { transform: translateY(0%); }
+      100% { transform: translateY(-50%); }
+    }
+    .animate-marquee {
+      animation: marquee 12s linear infinite;
+    }
+    .animate-marquee:hover {
+      animation-play-state: paused;
+    }
+  </style>
+</head>
+<body class="bg-light text-dark font-sans pb-5 mb-5" x-data="dashboardData()" x-init="init()">
+
+  <!-- TOP ANNOUNCEMENT BAR -->
+  <div class="text-white text-xs py-2 px-3 overflow-hidden d-flex align-items-center gap-2 shadow-sm" style="background-color: #0d9488;">
+    <span>📢</span>
+    <div class="text-truncate text-light fw-medium small">
+      New employees need to complete standard tasks to apply for withdrawal.
+    </div>
+  </div>
+
+  <main class="container py-4" style="max-width: 480px;">
+    
+    <!-- USER SUMMARY HEADER CARD -->
+    <div class="text-white p-4 rounded-4 shadow-sm d-flex justify-content-between align-items-center mb-3 position-relative overflow-hidden" style="background: linear-gradient(135deg, #064e3b 0%, #0f766e 50%, #115e59 100%);">
+      <!-- Decorative background blur circle for modern fintech look -->
+      <div style="position: absolute; right: -20px; bottom: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(10px); pointer-events: none;"></div>
+      
+      <div class="position-relative z-1">
+        <p class="text-uppercase tracking-wider fw-semibold text-white-50 m-0" style="font-size: 11px;">Available Balance</p>
+        <h2 class="fw-black mt-1 mb-1 tracking-tight">₱<span x-text="user ? parseFloat(user.balance || 0).toFixed(2) : '0.00'"></span></h2>
+        <p class="text-teal-400 mt-1 mb-0 fw-bold d-flex align-items-center gap-1" style="font-size: 11px; color: #5eead4;">
+          <span class="spinner-grow spinner-grow-sm text-teal" style="width: 8px; height: 8px; background-color: #5eead4;" role="status"></span>
+          Level <span x-text="userLevel"></span> Active
+        </p>
+      </div>
+      <div class="bg-white bg-opacity-10 rounded-4 border border-white border-opacity-25 d-flex align-items-center justify-content-center shadow-inner position-relative z-1" style="width: 48px; height: 48px; font-size: 20px;">
+        💼
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS (Top up, Withdrawal, About us) -->
+    <div class="bg-white p-3 rounded-4 border border-opacity-10 shadow-sm row g-2 text-center mb-3">
+      
+      <div class="col-4">
+        <a href="topup.html" class="d-flex flex-column align-items-center justify-content-center p-2 rounded-3 text-decoration-none group">
+          <div class="bg-indigo bg-opacity-10 border border-indigo-subtle rounded-4 d-flex align-items-center justify-content-center text-indigo shadow-sm mb-2" style="width: 48px; height: 48px; color: #4f46e5; background-color: #e0e7ff;">
+            <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+          </div>
+          <span class="fw-bold text-dark" style="font-size: 12px;">Top up</span>
+        </a>
+      </div>
+
+      <div class="col-4">
+        <a href="withdraw.html" class="d-flex flex-column align-items-center justify-content-center p-2 rounded-3 text-decoration-none">
+          <div class="rounded-4 d-flex align-items-center justify-content-center shadow-sm mb-2" style="width: 48px; height: 48px; color: #0d9488; background-color: #ccfbf1;">
+            <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <span class="fw-bold text-dark" style="font-size: 12px;">Withdrawal</span>
+        </a>
+      </div>
+
+      <div class="col-4">
+        <a href="about.html" class="d-flex flex-column align-items-center justify-content-center p-2 rounded-3 text-decoration-none">
+          <div class="bg-light border rounded-4 d-flex align-items-center justify-content-center text-secondary shadow-sm mb-2" style="width: 48px; height: 48px;">
+            <svg style="width: 22px; height: 22px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <span class="fw-bold text-dark" style="font-size: 12px;">About us</span>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- CURRENT MEMBER RECEIVES COMMISSION (LIVE FEED) -->
+    <div class="bg-white rounded-4 p-3 border border-opacity-10 shadow-sm mb-3">
+      <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-2">
+        <h3 class="fw-bold text-secondary text-uppercase m-0" style="font-size: 11px;">Current member receives commission</h3>
+        <span class="spinner-grow spinner-grow-sm text-success" role="status" style="width: 8px; height: 8px;"></span>
+      </div>
+
+      <!-- ANIMATED SCROLLING STREAM -->
+      <div style="height: 120px; overflow: hidden; position: relative;">
+        <div class="animate-marquee d-flex flex-column gap-2">
+          <template x-for="(feed, idx) in combinedFeeds" :key="idx">
+            <div class="d-flex align-items-center justify-content-between py-1 px-2 rounded-3 bg-light font-monospace" style="font-size: 11px;">
+              <span class="text-secondary fw-semibold" x-text="feed.user"></span>
+              <div class="text-end">
+                <span class="text-muted" style="font-size: 10px;">Gain income: </span>
+                <span class="fw-bold" style="color: #4f46e5;" x-text="`₱${feed.income}`"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENCY & PARTNERS GRID (Expanded Global Partners) -->
+    <div class="bg-white p-3 rounded-4 border border-opacity-10 shadow-sm">
+      <h3 class="fw-bold text-secondary text-uppercase mb-3" style="font-size: 11px;">Global Agency Partners</h3>
+      
+      <div class="row g-2 text-center">
+        <div class="col-4">
+          <div class="bg-light border rounded-3 p-2 d-flex flex-column align-items-center justify-content-center" style="height: 64px;">
+            <span class="fw-black text-purple" style="font-size: 10px; color: #581c87;">peak xv</span>
+            <span style="font-size: 6px;" class="fw-bold tracking-widest text-muted uppercase">PARTNERS</span>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="bg-light border rounded-3 p-2 d-flex flex-column align-items-center justify-content-center" style="height: 64px;">
+            <span class="fw-black fst-italic fs-6 text-dark">500 GLOBAL</span>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="bg-light border rounded-3 p-2 d-flex flex-column align-items-center justify-content-center" style="height: 64px;">
+            <span class="fw-black text-primary" style="font-size: 10px;">STIC</span>
+            <span style="font-size: 6px;" class="text-primary fw-bold uppercase">INVESTMENTS</span>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="bg-light border rounded-3 p-2 d-flex flex-column align-items-center justify-content-center" style="height: 64px;">
+            <span class="fw-extrabold text-danger" style="font-size: 9px;">Rakuten</span>
+            <span style="font-size: 6px;" class="fw-bold text-dark">Ventures</span>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="rounded-3 p-2 d-flex flex-column align-items-center justify-content-center shadow-sm text-white" style="height: 64px; background-color: #10b981;">
+            <span class="fw-black tracking-wider" style="font-size: 10px;">NAVER</span>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="bg-light border rounded-3 p-2 d-flex flex-column align-items-center justify-content-center" style="height: 64px;">
+            <div class="rounded-circle bg-info mb-1" style="width: 6px; height: 6px;"></div>
+            <span class="fw-bold text-dark lh-1" style="font-size: 9px;">telenor</span>
+            <span class="text-muted lh-1" style="font-size: 6px;">group</span>
+          </div>
+        </div>
+
+        <!-- NEW GLOBAL PARTNERS -->
+        <div class="col-4">
+          <div class="bg-light border rounded-3 p-2 d-flex flex-column align-items-center justify-content-center" style="height: 64px;">
+            <span class="fw-bold text-orange" style="font-size: 9px; color: #ea580c;">SEQUOIA</span>
+            <span style="font-size: 6px;" class="fw-bold text-muted uppercase">CAPITAL</span>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="bg-light border rounded-3 p-2 d-flex flex-column align-items-center justify-content-center" style="height: 64px;">
+            <span class="fw-bold text-dark" style="font-size: 9px;">SoftBank</span>
+            <span style="font-size: 6px;" class="text-muted uppercase">Vision Fund</span>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="bg-light border rounded-3 p-2 d-flex flex-column align-items-center justify-content-center" style="height: 64px;">
+            <span class="fw-bold text-info" style="font-size: 9px; color: #0284c7;">a16z</span>
+            <span style="font-size: 6px;" class="text-muted uppercase">Crypto & Tech</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed-bottom bg-white border-top d-flex justify-content-around py-2 z-3 mx-auto shadow-lg" style="max-width: 480px;">
+    <a href="dashboard.html" class="d-flex flex-column align-items-center text-decoration-none fw-bold" style="color: #0d9488; font-size: 11px;">
+      <span style="font-size: 16px;">🏠</span>
+      <span class="mt-0.5">Home</span>
+    </a>
+    <a href="tasks.html" class="d-flex flex-column align-items-center text-decoration-none text-muted" style="font-size: 11px;">
+      <span style="font-size: 16px;">💼</span>
+      <span class="mt-0.5">Job</span>
+    </a>
+    <a href="records.html" class="d-flex flex-column align-items-center text-decoration-none text-muted" style="font-size: 11px;">
+      <span style="font-size: 16px;">💳</span>
+      <span class="mt-0.5">Records</span>
+    </a>
+    <a href="account.html" class="d-flex flex-column align-items-center text-decoration-none text-muted" style="font-size: 11px;">
+      <span style="font-size: 16px;">👤</span>
+      <span class="mt-0.5">Account</span>
+    </a>
+  </nav>
+
+  <!-- Local Bootstrap JS Bundle -->
+  <script src="../js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    function dashboardData() {
+      return {
+        user: null,
+        userLevel: 1,
+        liveFeeds: [
+          { user: '09697***866', income: '33.36' },
+          { user: 'Pha****t', income: '14.25' },
+          { user: 'She****a', income: '8418.30' },
+          { user: '09173***411', income: '120.50' },
+          { user: 'Mar****o', income: '450.00' },
+          { user: '09289***902', income: '15.80' },
+          { user: 'Chris****n', income: '1240.00' },
+          { user: '09981***322', income: '88.10' },
+          { user: '09352***119', income: '235.40' },
+          { user: 'Jel****y', income: '1500.00' },
+          { user: '09205***774', income: '45.20' },
+          { user: 'Alv****n', income: '320.75' },
+          { user: '09458***633', income: '1250.00' },
+          { user: 'Bea****rice', income: '67.50' },
+          { user: '09121***998', income: '540.00' },
+          { user: 'Ken****th', income: '95.10' },
+          { user: '09772***445', income: '3100.00' },
+          { user: 'Ros****ie', income: '220.30' },
+          { user: '09083***210', income: '18.90' },
+          { user: 'Dan****iel', income: '780.45' },
+          { user: '09198***554', income: '112.50' },
+          { user: 'Kat****he', income: '430.20' },
+          { user: '09384***112', income: '990.00' },
+          { user: 'Vic****or', income: '55.40' },
+          { user: '09563***788', income: '1450.00' },
+          { user: 'Bea****trice', income: '230.10' },
+          { user: '09221***334', income: '410.00' },
+          { user: 'Jer****my', income: '670.80' },
+          { user: '09632***901', income: '12.50' },
+          { user: 'An****na', income: '3400.00' },
+          { user: '09154***678', income: '89.00' }
+        ],
+        get combinedFeeds() {
+          return [...this.liveFeeds, ...this.liveFeeds];
+        },
+        async init() {
+          if (typeof DB !== 'undefined' && DB.getCurrentUser) {
+            const currentUser = await DB.getCurrentUser();
+            
+            if (!currentUser) {
+              window.location.href = '../login.html';
+              return;
+            }
+
+            const userId = currentUser.id || currentUser.user_id;
+            if (userId && window.supabaseClient) {
+              const { data: profile, error } = await window.supabaseClient
+                .from('users')
+                .select('*')
+                .eq('id', userId)
+                .single();
+                
+              if (profile && !error) {
+                this.user = profile;
+              } else {
+                this.user = currentUser;
+              }
+            } else {
+              this.user = currentUser;
+            }
+
+            if (!this.user.balance && this.user.available_balance) {
+              this.user.balance = this.user.available_balance;
+            } else if (!this.user.balance) {
+              this.user.balance = 0;
+            }
+
+            this.userLevel = this.user.currentLevel || Math.floor((this.user.taskProgress || 0) / 10) + 1;
+          } else {
+            window.location.href = '../login.html';
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>

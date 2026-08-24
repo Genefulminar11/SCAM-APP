@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Records - PortalStore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans pb-24" x-data="recordsData()" x-init="init()" x-cloak>
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-slate-100 sticky top-0 z-20">
+    <div class="max-w-md mx-auto px-4 py-3.5 flex items-center justify-between">
+      <a href="dashboard.html" class="text-xs font-semibold text-emerald-600 flex items-center gap-1 hover:underline">
+        ← Back
+      </a>
+      <h1 class="font-bold text-slate-800 text-sm">Transaction Records</h1>
+      <div class="w-8"></div>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- FILTER TABS -->
+    <div class="flex bg-slate-200/60 p-1 rounded-2xl text-xs font-bold">
+      <button @click="filter = 'All'" 
+              :class="filter === 'All' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+              class="flex-1 py-2 rounded-xl transition">
+        All
+      </button>
+      <button @click="filter = 'Deposit'" 
+              :class="filter === 'Deposit' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+              class="flex-1 py-2 rounded-xl transition">
+        Deposits
+      </button>
+      <button @click="filter = 'Withdrawal'" 
+              :class="filter === 'Withdrawal' ? 'bg-white text-rose-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+              class="flex-1 py-2 rounded-xl transition">
+        Withdrawals
+      </button>
+    </div>
+
+    <!-- TRANSACTION LIST -->
+    <div class="space-y-3">
+      
+      <template x-if="filteredRecords.length === 0">
+        <div class="bg-white p-8 rounded-3xl border border-slate-100 text-center space-y-2">
+          <span class="text-3xl block">📑</span>
+          <p class="text-xs font-bold text-slate-700">No Transaction Records</p>
+          <p class="text-[10px] text-slate-400">Submitted top-ups and withdrawals will appear here.</p>
+        </div>
+      </template>
+
+      <template x-for="tx in filteredRecords" :key="tx.id">
+        <div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div :class="tx.type.toLowerCase() === 'deposit' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'"
+                   class="w-9 h-9 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0">
+                <span x-text="tx.type.toLowerCase() === 'deposit' ? '📥' : '📤'"></span>
+              </div>
+              <div>
+                <h3 class="text-xs font-bold text-slate-800 capitalize" x-text="tx.type"></h3>
+                <p class="text-[10px] text-slate-400" x-text="formatDate(tx.createdAt)"></p>
+              </div>
+            </div>
+
+            <!-- STATUS BADGE -->
+            <span :class="{
+                    'bg-amber-50 text-amber-600 border-amber-200': tx.status === 'Pending',
+                    'bg-emerald-50 text-emerald-600 border-emerald-200': tx.status === 'Approved' || tx.status === 'Success',
+                    'bg-rose-50 text-rose-600 border-rose-200': tx.status === 'Rejected' || tx.status === 'Failed'
+                  }"
+                  class="text-[9px] font-extrabold px-2.5 py-1 rounded-full border"
+                  x-text="tx.status || 'Pending'">
+            </span>
+          </div>
+
+          <div class="bg-slate-50 p-3 rounded-2xl flex justify-between items-center text-xs">
+            <div>
+              <p class="text-[10px] text-slate-400 font-medium" x-text="tx.method"></p>
+              <template x-if="tx.refNumber">
+                <p class="text-[10px] font-mono text-slate-500" x-text="`Account/Ref: ${tx.refNumber}`"></p>
+              </template>
+            </div>
+            <p :class="tx.type.toLowerCase() === 'deposit' ? 'text-emerald-600' : 'text-slate-800'" class="font-black text-sm">
+              <span x-text="tx.type.toLowerCase() === 'deposit' ? '+₱' : '-₱'"></span><span x-text="tx.amount"></span>
+            </p>
+          </div>
+        </div>
+      </template>
+
+    </div>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around py-3 z-20 max-w-md mx-auto shadow-lg">
+    <a href="dashboard.html" class="flex flex-col items-center text-xs font-medium text-slate-400 hover:text-emerald-600 transition">
+      <span class="text-base">🏠</span>
+      <span class="mt-0.5">Home</span>
+    </a>
+    <a href="tasks.html" class="flex flex-col items-center text-xs font-medium text-slate-400 hover:text-emerald-600 transition">
+      <span class="text-base">💼</span>
+      <span class="mt-0.5">Job</span>
+    </a>
+    <a href="records.html" class="flex flex-col items-center text-xs font-bold text-emerald-600 transition">
+      <span class="text-base">💳</span>
+      <span class="mt-0.5">Records</span>
+    </a>
+    <a href="account.html" class="flex flex-col items-center text-xs font-medium text-slate-400 hover:text-emerald-600 transition">
+      <span class="text-base">👤</span>
+      <span class="mt-0.5">Account</span>
+    </a>
+  </nav>
+
+  <script>
+    function recordsData() {
+      return {
+        filter: 'All',
+        transactions: [],
+
+        get filteredRecords() {
+          if (this.filter === 'All') return this.transactions;
+          return this.transactions.filter(t => t.type.toLowerCase() === this.filter.toLowerCase());
+        },
+
+        async init() {
+          try {
+            // Safely fetch current user profile via the common DB helper
+            const currentUser = await DB.getCurrentUser();
+            if (!currentUser) {
+              window.location.href = '../login.html';
+              return;
+            }
+
+            // Fetch transactions securely using the validated user's id
+            const { data, error } = await supabaseClient
+              .from('transactions')
+              .select('*')
+              .eq('user_id', currentUser.id)
+              .order('created_at', { ascending: false });
+
+            if (!error && data) {
+              this.transactions = data.map(tx => ({
+                id: tx.id,
+                type: tx.type,
+                amount: tx.amount,
+                method: tx.method,
+                refNumber: tx.ref_number,
+                status: tx.status,
+                createdAt: tx.created_at
+              }));
+            }
+          } catch (e) {
+            console.error("Error loading records:", e);
+          }
+        },
+
+        formatDate(isoString) {
+          if (!isoString) return '';
+          const d = new Date(isoString);
+          return d.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
+      }
+    }
+  </script>
+</body>
+</html>

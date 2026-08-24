@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Us - PortalStore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="db.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans pb-24">
+
+  <!-- HEADER -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-slate-100 sticky top-0 z-20">
+    <div class="max-w-md mx-auto px-4 py-3.5 flex items-center justify-between">
+      <a href="dashboard.html" class="text-xs font-semibold text-emerald-600 flex items-center gap-1 hover:underline">
+        ← Back
+      </a>
+      <h1 class="font-bold text-slate-800 text-sm">About PortalStore</h1>
+      <div class="w-8"></div>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- HERO / COMPANY OVERVIEW CARD -->
+    <div class="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 text-white p-6 rounded-3xl shadow-xl space-y-4 relative overflow-hidden border border-slate-800">
+      <div class="flex items-center gap-3 relative z-10">
+        <div class="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-emerald-500/20">
+          P
+        </div>
+        <div>
+          <h2 class="text-lg font-black tracking-tight">PortalStore Inc.</h2>
+          <p class="text-xs text-emerald-400 font-semibold">Global Merchant Solutions</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-300 leading-relaxed relative z-10">
+        PortalStore is a premier digital marketplace optimization platform connecting global e-commerce merchants with verified task partners to accelerate order processing, brand exposure, and sales fulfillment.
+      </p>
+
+      <!-- CERTIFICATES DIRECT ACTION BUTTON -->
+      <a href="certificates.html" 
+         class="relative z-10 flex items-center justify-between w-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 p-3 rounded-2xl text-xs font-bold text-emerald-300 transition">
+        <span class="flex items-center gap-2">
+          <span>📜</span>
+          <span>View Official Certificates & Registrations</span>
+        </span>
+        <span>→</span>
+      </a>
+
+      <div class="grid grid-cols-3 gap-2 pt-3 border-t border-slate-800 text-center relative z-10">
+        <div class="bg-slate-800/50 p-2 rounded-xl">
+          <p class="text-xs font-black text-emerald-400">500K+</p>
+          <p class="text-[9px] text-slate-400 font-medium">Active Users</p>
+        </div>
+        <div class="bg-slate-800/50 p-2 rounded-xl">
+          <p class="text-xs font-black text-emerald-400">120+</p>
+          <p class="text-[9px] text-slate-400 font-medium">Countries</p>
+        </div>
+        <div class="bg-slate-800/50 p-2 rounded-xl">
+          <p class="text-xs font-black text-emerald-400">99.9%</p>
+          <p class="text-[9px] text-slate-400 font-medium">Uptime</p>
+        </div>
+      </div>
+
+      <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+    </div>
+
+    <!-- CORE MISSION & VALUES -->
+    <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+      <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Our Core Pillars</h3>
+
+      <div class="space-y-3">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-bold shrink-0">
+            🔒
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-slate-800">Bank-Grade Security</h4>
+            <p class="text-[11px] text-slate-500 leading-normal">
+              All transactions and merchant data are encrypted using 256-bit SSL protocol to guarantee safe payouts and funds protection.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-bold shrink-0">
+            ⚡
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-slate-800">Automated Commission Dispatch</h4>
+            <p class="text-[11px] text-slate-500 leading-normal">
+              Real-time task synchronization ensures instantaneous distribution of merchant commissions upon task order completion.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-bold shrink-0">
+            🤝
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-slate-800">Strategic Venture Network</h4>
+            <p class="text-[11px] text-slate-500 leading-normal">
+              Directly integrated with top-tier venture funds and institutional liquidity partners to ensure uninterrupted platform capital.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GLOBAL AGENCY & INSTITUTIONAL PARTNERS (Expanded) -->
+    <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-3">
+      <div class="flex justify-between items-center">
+        <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Global Agency Partners</h3>
+        <span class="text-[9px] font-bold bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">Verified</span>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+        <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+          <span class="font-bold text-[10px] text-purple-800">Peak XV</span>
+          <span class="text-[6px] text-slate-400 font-bold uppercase">Partners</span>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+          <span class="font-extrabold text-xs italic text-slate-800">500 GLOBAL</span>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+          <span class="font-bold text-[10px] text-blue-600">STIC</span>
+          <span class="text-[6px] text-blue-500 font-bold uppercase">Investments</span>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+          <span class="font-bold text-[10px] text-rose-600">Rakuten</span>
+          <span class="text-[6px] text-slate-700 font-bold">Ventures</span>
+        </div>
+        <div class="p-2.5 bg-emerald-600 text-white rounded-2xl flex items-center justify-center">
+          <span class="font-black text-[10px] tracking-wider">NAVER</span>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+          <span class="font-bold text-[10px] text-sky-500">Telenor</span>
+          <span class="text-[6px] text-slate-400 uppercase">Group</span>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+          <span class="font-bold text-[10px] text-orange-600">SEQUOIA</span>
+          <span class="text-[6px] text-slate-400 uppercase">Capital</span>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+          <span class="font-bold text-[10px] text-slate-800">SoftBank</span>
+          <span class="text-[6px] text-slate-400 uppercase">Vision Fund</span>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+          <span class="font-bold text-[10px] text-sky-600">a16z</span>
+          <span class="text-[6px] text-slate-400 uppercase">Crypto & Tech</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLIANCE & LEGAL CERTIFICATION CARD -->
+    <div class="bg-slate-100/80 p-5 rounded-3xl border border-slate-200/80 text-center space-y-3">
+      <div class="space-y-1">
+        <p class="text-[11px] font-bold text-slate-700">Official Merchant Operations License</p>
+        <p class="text-[10px] text-slate-500">Certificate No: REG-8849201-GLOBAL</p>
+      </div>
+
+      <!-- SECONDARY BUTTON LINK TO CERTIFICATES -->
+      <a href="certificates.html" 
+         class="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-2xl text-xs shadow-sm transition w-full">
+        <span>View Registrations & License Documents</span> 📜
+      </a>
+
+      <p class="text-[9px] text-slate-400 pt-1">© 2026 PortalStore Network Inc. All rights reserved.</p>
+    </div>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 flex justify-around py-3 z-20 max-w-md mx-auto shadow-lg">
+    <a href="dashboard.html" class="flex flex-col items-center text-xs font-medium text-slate-400 hover:text-emerald-600 transition">
+      <span class="text-base">🏠</span>
+      <span class="mt-0.5">Home</span>
+    </a>
+    <a href="tasks.html" class="flex flex-col items-center text-xs font-medium text-slate-400 hover:text-emerald-600 transition">
+      <span class="text-base">💼</span>
+      <span class="mt-0.5">Job</span>
+    </a>
+    <a href="transaction.html" class="flex flex-col items-center text-xs font-medium text-slate-400 hover:text-emerald-600 transition">
+      <span class="text-base">💳</span>
+      <span class="mt-0.5">Records</span>
+    </a>
+    <a href="account.html" class="flex flex-col items-center text-xs font-medium text-slate-400 hover:text-emerald-600 transition">
+      <span class="text-base">👤</span>
+      <span class="mt-0.5">Account</span>
+    </a>
+  </nav>
+
+</body>
+</html>

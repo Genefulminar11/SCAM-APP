@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Task - PortalStore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans pb-24" 
+      x-data="taskPageData()" 
+      x-init="initTask()" 
+      x-cloak>
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-gray-100 sticky top-0 z-20">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-base">P</div>
+        <span class="font-bold text-gray-800 text-base">Order Task</span>
+      </div>
+      <span class="text-xs font-bold bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100" 
+            x-text="`Level ${taskInfo ? taskInfo.currentLevel : 1}`"></span>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4" x-show="taskInfo && taskInfo.task">
+
+    <!-- USER BALANCE CARD -->
+    <div class="bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800 text-white p-5 rounded-2xl shadow-md space-y-4">
+      
+      <div class="flex justify-between items-start">
+        <div class="space-y-3">
+          <div>
+            <p class="text-[10px] text-emerald-200 uppercase tracking-wider font-bold">AVAILABLE BALANCE</p>
+            <p class="text-2xl font-black tracking-tight mt-0.5">₱<span x-text="user ? parseFloat(user.balance || 0).toFixed(2) : '0.00'"></span></p>
+          </div>
+
+          <div class="pt-1 border-t border-emerald-600/50">
+            <p class="text-[10px] text-emerald-200 uppercase tracking-wider font-bold">AVAILABLE TO WITHDRAW</p>
+            <p class="text-lg font-bold text-emerald-100">₱<span x-text="user ? parseFloat(user.available_balance || 0).toFixed(2) : '0.00'"></span></p>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <a href="topup.html" class="bg-white text-emerald-800 hover:bg-emerald-50 text-xs font-bold px-4 py-2 rounded-xl shadow-sm text-center transition">
+            Top up
+          </a>
+          <a href="withdraw.html" class="bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 border border-emerald-600/40 text-xs font-bold px-4 py-2 rounded-xl shadow-sm text-center transition">
+            Withdraw
+          </a>
+        </div>
+      </div>
+
+      <!-- PROGRESS BAR (10 ORDERS PER LEVEL) -->
+      <div class="space-y-1.5 pt-2">
+        <div class="flex justify-between items-center text-xs font-bold">
+          <span class="text-emerald-100" x-text="`Level ${taskInfo.currentLevel} Progress`"></span>
+          <span x-text="`${taskInfo.taskProgress} / 10 Completed`"></span>
+        </div>
+        <div class="w-full bg-emerald-900/50 rounded-full h-2 overflow-hidden">
+          <div class="bg-white h-2 rounded-full transition-all duration-300" 
+               :style="`width: ${(taskInfo.taskProgress / 10) * 100}%`"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORDER HISTORY BUTTON BAR -->
+    <a href="orders.html" class="flex items-center justify-between bg-white p-3.5 px-4 rounded-2xl border border-gray-100 shadow-sm hover:border-emerald-200 hover:shadow transition group">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-base font-bold group-hover:scale-105 transition">
+          📦
+        </div>
+        <div>
+          <p class="text-xs font-bold text-gray-800">Order History</p>
+          <p class="text-[10px] text-gray-400">View all completed orders & earned commissions</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1 text-emerald-600 text-xs font-bold">
+        <span>View</span>
+        <span class="group-hover:translate-x-0.5 transition">→</span>
+      </div>
+    </a>
+
+    <!-- ALERTS -->
+    <div x-show="errorMessage" x-text="errorMessage" class="p-3 bg-red-50 text-red-600 text-xs rounded-xl text-center border border-red-100" x-cloak></div>
+    <div x-show="successMessage" x-text="successMessage" class="p-3 bg-green-50 text-green-600 text-xs rounded-xl text-center border border-green-100" x-cloak></div>
+
+    <!-- SINGLE TASK CARD -->
+    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5 text-center">
+      
+      <div class="w-32 h-32 bg-gray-50 rounded-2xl mx-auto overflow-hidden border border-gray-100 flex items-center justify-center p-2">
+        <img :src="taskInfo.task.image" 
+             :alt="taskInfo.task.title" 
+             class="w-full h-full object-contain"
+             @error="$el.outerHTML = `<div class='text-4xl'>📦</div>`">
+      </div>
+
+      <div>
+        <h3 class="font-bold text-gray-800 text-base" x-text="taskInfo.task.title"></h3>
+        <p class="text-xs text-gray-400 mt-0.5">Level <span x-text="taskInfo.currentLevel"></span> Task</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 bg-gray-50 p-3.5 rounded-xl text-xs">
+        <div>
+          <p class="text-gray-400 font-medium">Order Price</p>
+          <p class="font-bold text-gray-800 mt-0.5">₱<span x-text="taskInfo.task.price.toFixed(2)"></span></p>
+        </div>
+        <div>
+          <p class="text-gray-400 font-medium">Commission Earned</p>
+          <p class="font-bold text-emerald-600 mt-0.5">₱<span x-text="(taskInfo.task.price * taskInfo.task.commissionRate).toFixed(2)"></span></p>
+        </div>
+      </div>
+
+      <template x-if="user && parseFloat(user.balance || 0) < taskInfo.task.price">
+        <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 p-2.5 rounded-xl font-medium">
+          ⚠️ Insufficient balance to process this order. Top up your account to continue.
+        </p>
+      </template>
+
+      <button @click="handleGrabOrder()" 
+              :disabled="loading || (user && parseFloat(user.balance || 0) < taskInfo.task.price)"
+              class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3.5 rounded-xl text-xs shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
+        <span x-text="loading ? 'Processing Order...' : 'Complete & Grab Order'"></span>
+      </button>
+
+    </div>
+
+  </main>
+
+  <!-- CONGRATULATIONS LEVEL UP MODAL -->
+  <div x-show="showLevelUpModal" 
+       x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-xs rounded-3xl p-6 text-center shadow-2xl space-y-4 animate-bounce-short">
+      
+      <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner">
+        🎉
+      </div>
+
+      <div class="space-y-1">
+        <h3 class="text-lg font-black text-gray-800">Congratulations!</h3>
+        <p class="text-xs text-gray-500">You completed 10 orders and promoted to</p>
+        <p class="text-xl font-black text-emerald-600" x-text="`LEVEL ${newLevelReached}`"></p>
+      </div>
+
+      <p class="text-[11px] bg-emerald-50 text-emerald-700 p-2.5 rounded-xl font-medium border border-emerald-100">
+        Higher commissions and exclusive task privileges unlocked!
+      </p>
+
+      <button @click="showLevelUpModal = false" 
+              class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow-md transition">
+        Continue Working
+      </button>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-3 z-20 max-w-md mx-auto shadow-md">
+    <a href="dashboard.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">🏠</span>
+      <span class="mt-0.5">Home</span>
+    </a>
+    <a href="tasks.html" class="flex flex-col items-center text-xs font-bold text-emerald-600 transition">
+      <span class="text-base">💼</span>
+      <span class="mt-0.5">Job</span>
+    </a>
+    <a href="records.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">💳</span>
+      <span class="mt-0.5">Records</span>
+    </a>
+    <a href="account.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">👤</span>
+      <span class="mt-0.5">Account</span>
+    </a>
+  </nav>
+
+  <script>
+    const MOCK_PRODUCTS_50 = [
+      { id: 1, title: 'Smart Fitness Watch', price: 850.00, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200' },
+      { id: 2, title: 'Wireless Bluetooth Earbuds', price: 620.00, image: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=200' },
+      { id: 3, title: 'Mini Portable Power Bank', price: 950.00, image: 'https://images.unsplash.com/photo-1609592424155-27dd44d57c7c?w=200' },
+      { id: 4, title: 'Ultra HD Action Camera', price: 2400.00, image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=200' },
+      { id: 5, title: 'Ergonomic Desk LED Lamp', price: 780.00, image: 'https://images.unsplash.com/photo-1534349762230-10cadf05fc2d?w=200' },
+      { id: 6, title: 'Stainless Steel Tumbler', price: 450.00, image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=200' },
+      { id: 7, title: 'Bluetooth Mechanical Keyboard', price: 1650.00, image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=200' },
+      { id: 8, title: 'Wireless Optical Gaming Mouse', price: 890.00, image: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=200' },
+      { id: 9, title: 'Compact Travel Backpack', price: 1200.00, image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200' },
+      { id: 10, title: 'Waterproof Sports Duffle Bag', price: 1350.00, image: 'https://images.unsplash.com/photo-1545235617-9465d2a55698?w=200' },
+      { id: 11, title: 'HD Webcam with Mic', price: 1100.00, image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=200' },
+      { id: 12, title: 'Portable Neck Fan', price: 550.00, image: 'https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?w=200' },
+      { id: 13, title: 'Mini USB Desk Fan', price: 380.00, image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=200' },
+      { id: 14, title: 'Fast Charging Wall Adapter', price: 420.00, image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=200' },
+      { id: 15, title: 'Braided Type-C Cable 3-Pack', price: 290.00, image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=200' },
+      { id: 16, title: 'Smart Digital Kitchen Scale', price: 520.00, image: 'https://images.unsplash.com/photo-1589782182703-2aaa69037b5b?w=200' },
+      { id: 17, title: 'Aromatherapy Essential Oil Diffuser', price: 920.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=200' },
+      { id: 18, title: 'Non-Stick Ceramic Frying Pan', price: 1150.00, image: 'https://images.unsplash.com/photo-1583777926168-963d03823467?w=200' },
+      { id: 19, title: 'Electric Coffee Grinder', price: 1400.00, image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=200' },
+      { id: 20, title: 'Insulated Lunch Box Bag', price: 480.00, image: 'https://images.unsplash.com/photo-1585336261022-6fc0e69fc2c5?w=200' },
+      { id: 21, title: 'Mini Handheld Vacuum Cleaner', price: 1250.00, image: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=200' },
+      { id: 22, title: 'Rechargeable Lint Remover', price: 490.00, image: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=200' },
+      { id: 23, title: 'Solar Powered Outdoor Lights', price: 990.00, image: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=200' },
+      { id: 24, title: 'Memory Foam Travel Pillow', price: 680.00, image: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=200' },
+      { id: 25, title: 'Foldable Laptop Stand', price: 750.00, image: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=200' },
+      { id: 26, title: 'Vertical Ergonomic Mouse', price: 980.00, image: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=200' },
+      { id: 27, title: 'RGB Gaming Headset Stand', price: 830.00, image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200' },
+      { id: 28, title: 'Surround Sound Gaming Headset', price: 1550.00, image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200' },
+      { id: 29, title: 'Phone Tripod with Ring Light', price: 890.00, image: 'https://images.unsplash.com/photo-1527061011665-3652c757a4d4?w=200' },
+      { id: 30, title: 'Wireless Charging Pad', price: 650.00, image: 'https://images.unsplash.com/photo-1586816879360-004f5b0c51e3?w=200' },
+      { id: 31, title: 'Magnetic Car Phone Mount', price: 390.00, image: 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=200' },
+      { id: 32, title: 'Stainless Steel Cutlery Set', price: 720.00, image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200' },
+      { id: 33, title: 'Automatic Wine Opener', price: 950.00, image: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=200' },
+      { id: 34, title: 'Silicone Baking Mat Set', price: 460.00, image: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=200' },
+      { id: 35, title: 'Digital Meat Thermometer', price: 410.00, image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=200' },
+      { id: 36, title: 'Multifunctional Vegetable Chopper', price: 820.00, image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=200' },
+      { id: 37, title: 'Electric Milk Frother', price: 530.00, image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=200' },
+      { id: 38, title: 'Insulated Glass Coffee Mug', price: 350.00, image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=200' },
+      { id: 39, title: 'Bamboo Desktop Organizer', price: 790.00, image: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=200' },
+      { id: 40, title: 'Leather Mouse Pad Desk Mat', price: 590.00, image: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=200' },
+      { id: 41, title: 'Noise Cancelling Earplugs', price: 320.00, image: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=200' },
+      { id: 42, title: 'Reusable Silicone Food Bags', price: 480.00, image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200' },
+      { id: 43, title: 'Waterproof Phone Pouch 2-Pack', price: 280.00, image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=200' },
+      { id: 44, title: 'Portable Camping Lantern', price: 690.00, image: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=200' },
+      { id: 45, title: 'Quick Dry Microfiber Towel', price: 390.00, image: 'https://images.unsplash.com/photo-1545235617-9465d2a55698?w=200' },
+      { id: 46, title: 'Fitness Resistance Bands Set', price: 540.00, image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=200' },
+      { id: 47, title: 'Adjustable Hand Grip Strengthener', price: 290.00, image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=200' },
+      { id: 48, title: 'Sports Running Waist Belt', price: 420.00, image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200' },
+      { id: 49, title: 'LED Night Light with Sensor', price: 310.00, image: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=200' },
+      { id: 50, title: 'Mini Portable Air Humidifier', price: 680.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=200' }
+    ];
+
+    function taskPageData() {
+      return {
+        user: null,
+        taskInfo: {
+          currentLevel: 1,
+          taskProgress: 0,
+          task: { title: '', price: 0, commissionRate: 0.05, image: '' }
+        },
+        loading: false,
+        errorMessage: '',
+        successMessage: '',
+        showLevelUpModal: false,
+        newLevelReached: 1,
+        
+        async initTask() {
+          await this.refreshTask();
+        },
+        
+        async refreshTask() {
+          try {
+            // Safely grab user via shared DB wrapper first to ensure profile mapping matches
+            const currentUser = await DB.getCurrentUser();
+            if (!currentUser) {
+              window.location.href = '../login.html';
+              return;
+            }
+            this.user = currentUser;
+
+            const currentLevel = parseInt(this.user.current_level || 1);
+            const calculatedCommissionRate = 0.05 * currentLevel;
+            const randomProduct = MOCK_PRODUCTS_50[Math.floor(Math.random() * MOCK_PRODUCTS_50.length)];
+            
+            this.taskInfo = {
+              currentLevel: currentLevel,
+              taskProgress: parseInt(this.user.task_progress || 0),
+              task: {
+                ...randomProduct,
+                commissionRate: calculatedCommissionRate
+              }
+            };
+          } catch (e) {
+            console.error("Initialization error:", e);
+            this.errorMessage = "Failed to load user task data.";
+          }
+        },
+        
+        async handleGrabOrder() {
+          this.errorMessage = '';
+          this.successMessage = '';
+          this.loading = true;
+
+          const price = parseFloat(this.taskInfo.task.price || 0);
+          const commissionRate = parseFloat(this.taskInfo.task.commissionRate || 0);
+          const commission = price * commissionRate;
+
+          try {
+            // Use DB.getCurrentUser() to guarantee fetching the exact user profile record matching session
+            const freshUser = await DB.getCurrentUser();
+            if (!freshUser) {
+              window.location.href = '../login.html';
+              return;
+            }
+
+            const currentBalance = parseFloat(freshUser.balance || 0);
+            
+            if (currentBalance < price) {
+              throw new Error("Insufficient available balance to grab this order. Please top up.");
+            }
+
+            const currentProgress = parseInt(freshUser.task_progress || 0);
+            const currentLevel = parseInt(freshUser.current_level || 1);
+            const currentAvailableBal = parseFloat(freshUser.available_balance || 0);
+
+            const newProgress = currentProgress + 1;
+            let newLevel = currentLevel;
+            let leveledUp = false;
+
+            if (newProgress >= 10) {
+              newLevel += 1;
+              leveledUp = true;
+            }
+
+            const newMainBalance = currentBalance - price; 
+            const newAvailableBalance = currentAvailableBal + commission;
+
+            const updatePayload = {
+              task_progress: leveledUp ? 0 : newProgress,
+              current_level: newLevel,
+              balance: newMainBalance,
+              available_balance: newAvailableBalance
+            };
+
+            const { error: updateError } = await supabaseClient
+              .from('users')
+              .update(updatePayload)
+              .eq('id', freshUser.id);
+
+            if (updateError) throw new Error(updateError.message);
+
+            try {
+              await supabaseClient.from('orders').insert([{
+                user_id: freshUser.id,
+                description: this.taskInfo.task.title,
+                amount: commission,
+                price: price,
+                status: 'Completed'
+              }]);
+            } catch (orderErr) {
+              console.warn("Could not insert order history:", orderErr);
+            }
+
+            this.loading = false;
+            this.successMessage = `Order completed successfully! Earned ₱${commission.toFixed(2)}`;
+            
+            await this.refreshTask();
+
+            if (leveledUp) {
+              this.newLevelReached = newLevel;
+              this.showLevelUpModal = true;
+            }
+          } catch (err) {
+            this.loading = false;
+            this.errorMessage = err.message || 'Failed to complete order task.';
+            console.error("Task error:", err);
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>

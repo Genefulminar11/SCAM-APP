@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - PortalStore</title>
+  
+  <!-- Local Bootstrap CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  
+  <!-- External Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-light text-dark font-sans min-vh-100 d-flex flex-column justify-content-between" x-data="signupData()" x-init="init()">
+  
+  <!-- UNIVERSAL HEADER -->
+  <header class="bg-white border-bottom sticky-top shadow-sm">
+    <div class="mx-auto px-4 py-3 d-flex align-items-center justify-content-between" style="max-width: 480px;">
+      <a href="index.html" class="text-secondary text-decoration-none small fw-semibold">
+        ← Home
+      </a>
+      <span class="fw-bold text-dark fs-6">PortalStore</span>
+      <div style="width: 32px;"></div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="container px-4 py-5 my-auto" style="max-width: 440px;">
+    <div class="text-center mb-4">
+      <div class="text-white fw-bold rounded-4 d-inline-flex align-items-center justify-content-center shadow-sm mb-3" style="width: 56px; height: 56px; font-size: 24px; background-color: #0d9488;">
+        P
+      </div>
+      <h1 class="h4 fw-bold text-dark">Create an Account</h1>
+      <p class="text-muted small">Sign up to start completing tasks and earning commissions</p>
+    </div>
+
+    <!-- ERROR NOTIFICATION ALERT -->
+    <div x-show="errorMessage" x-text="errorMessage" 
+         class="alert alert-danger py-2 px-3 small text-center rounded-3 mb-3" x-cloak>
+    </div>
+
+    <!-- SIGNUP FORM CARD -->
+    <form @submit.prevent="handleSignup()" class="bg-white p-4 p-md-5 rounded-4 shadow-sm border border-opacity-10">
+      
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label fw-bold text-secondary text-uppercase" style="font-size: 11px;">First Name</label>
+          <input type="text" x-model="form.firstName" required placeholder="John"
+                 class="form-control form-control-sm py-2 bg-light border-0 rounded-3">
+        </div>
+        <div class="col-6">
+          <label class="form-label fw-bold text-secondary text-uppercase" style="font-size: 11px;">Last Name</label>
+          <input type="text" x-model="form.lastName" required placeholder="Doe"
+                 class="form-control form-control-sm py-2 bg-light border-0 rounded-3">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold text-secondary text-uppercase" style="font-size: 11px;">Phone Number</label>
+        <input type="tel" x-model="form.phone" required placeholder="09123456789"
+               class="form-control form-control-sm py-2 bg-light border-0 rounded-3">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold text-secondary text-uppercase" style="font-size: 11px;">Password</label>
+        <input type="password" x-model="form.password" required placeholder="••••••••"
+               class="form-control form-control-sm py-2 bg-light border-0 rounded-3">
+      </div>
+
+      <!-- INVITATION CODE ENTERED BY NEW USER -->
+      <div class="mb-3">
+        <label class="form-label fw-bold text-secondary text-uppercase" style="font-size: 11px;">Invitation Code (Optional)</label>
+        <input type="text" x-model="form.invitationCode" placeholder="e.g. ABC123"
+               class="form-control form-control-sm py-2 bg-light border-0 rounded-3 text-uppercase">
+      </div>
+
+      <!-- INFO BOX -->
+      <div class="mb-4 p-3 bg-light rounded-3 border border-opacity-10 text-muted" style="font-size: 12px;">
+        <span class="fw-bold text-dark d-block mb-1">🎁 Permanent Referral Code</span>
+        Your unique personal referral code will be auto-generated and permanently assigned to your account upon registration.
+      </div>
+
+     <button type="submit" :disabled="loading"
+        class="btn w-100 py-2.5 text-white fw-bold rounded-3 shadow-sm mt-2 position-relative" style="background-color: #0d9488; font-size: 13px;">
+  
+      <template x-if="!loading">
+        <span>Create Account</span>
+      </template>
+      
+      <template x-if="loading">
+        <span class="d-inline-flex align-items-center justify-content-center gap-2">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Creating account...
+        </span>
+      </template>
+    </button>
+
+      <div class="text-center pt-3 mt-3 border-top small text-muted">
+        Already have an account? 
+        <a href="login.html" class="text-decoration-none fw-bold" style="color: #0d9488;">Sign In</a>
+      </div>
+    </form>
+  </main>
+
+  <!-- UNIVERSAL FOOTER -->
+  <footer class="text-center py-4 text-muted small" style="font-size: 11px;">
+    <p class="mb-0">&copy; 2026 PortalStore. All rights reserved.</p>
+  </footer>
+
+  <!-- Local Bootstrap JS Bundle -->
+  <script src="js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    function signupData() {
+      return {
+        form: {
+          firstName: '',
+          lastName: '',
+          phone: '',
+          password: '',
+          invitationCode: ''
+        },
+        errorMessage: '',
+        loading: false,
+
+        init() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const refParam = urlParams.get('ref') || urlParams.get('code');
+          if (refParam) {
+            this.form.invitationCode = refParam.toUpperCase();
+          }
+        },
+
+        async handleSignup() {
+          this.errorMessage = '';
+          this.loading = true;
+
+          try {
+            const res = await DB.registerUser(
+              this.form.phone, 
+              this.form.password, 
+              this.form.firstName, 
+              this.form.lastName, 
+              this.form.invitationCode
+            );
+            
+            if (!res || !res.success) {
+              this.errorMessage = res?.message || 'Registration failed. Please check your inputs.';
+              this.loading = false;
+              return;
+            }
+
+            window.location.href = 'login.html';
+          } catch (err) {
+            console.error(err);
+            this.errorMessage = 'An unexpected error occurred. Please try again.';
+            this.loading = false;
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account - PortalStore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine JS Core -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Supabase CDN & Client Script -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans pb-20" 
+      x-data="accountPage" 
+      x-init="initAccount()"
+      x-cloak>
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-gray-100 sticky top-0 z-20">
+    <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-base">
+          P
+        </div>
+        <span class="font-bold text-gray-800 text-base">Personal Center</span>
+      </div>
+      <button @click="handleLogout()" class="text-xs text-red-500 font-semibold bg-red-50 px-2.5 py-1 rounded-md hover:bg-red-100 transition">
+        Sign Out
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4" x-show="user">
+
+    <!-- USER SUMMARY CARD -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <!-- AVATAR DISPLAY -->
+        <div class="w-14 h-14 bg-gradient-to-tr from-teal-600 to-teal-400 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xl shadow-sm shrink-0">
+          <template x-if="user && user.avatar_url">
+            <img :src="user.avatar_url" alt="Avatar" class="w-full h-full object-cover">
+          </template>
+          <template x-if="!user || !user.avatar_url">
+            <span x-text="user && user.phone ? user.phone.slice(-2) : 'US'"></span>
+          </template>
+        </div>
+        <div>
+          <!-- FULL NAME ABOVE PHONE -->
+          <h2 class="text-base font-extrabold text-gray-900" x-text="user ? (`${user.first_name || ''} ${user.last_name || ''}`.trim() || user.phone) : ''"></h2>
+          <p class="text-xs text-gray-400" x-text="user ? user.phone : ''"></p>
+          <!-- Referral Code -->
+          <p class="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
+            Referral: <span class="font-mono text-teal-600 font-bold tracking-wide" x-text="user ? (user.ref_code || 'N/A') : ''"></span>
+          </p>
+        </div>
+      </div>
+      <!-- Edit Information Button -->
+      <button @click="openModal()" class="px-3 py-2 bg-teal-50 text-teal-700 text-xs font-bold rounded-xl border border-teal-100 hover:bg-teal-100 transition flex items-center gap-1 shadow-sm">
+        <span>⚙️</span> Edit
+      </button>
+    </div>
+
+    <!-- ACCOUNT MENU OPTIONS -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100 text-xs font-medium overflow-hidden">
+      <a href="security.html" class="p-4 flex justify-between items-center text-gray-700 hover:bg-gray-50 transition">
+        <div class="flex items-center gap-3">
+          <span class="p-2 bg-teal-50 text-teal-600 rounded-lg">🔒</span>
+          <span>Security & Password</span>
+        </div>
+        <span class="text-gray-400">→</span>
+      </a>
+
+      <a href="bank-details.html" class="p-4 flex justify-between items-center text-gray-700 hover:bg-gray-50 transition">
+        <div class="flex items-center gap-3">
+          <span class="p-2 bg-teal-50 text-teal-600 rounded-lg">💳</span>
+          <span>Bank Account Details</span>
+        </div>
+        <span class="text-gray-400">→</span>
+      </a>
+
+      <a href="team.html" class="p-4 flex justify-between items-center text-gray-700 hover:bg-gray-50 transition">
+        <div class="flex items-center gap-3">
+          <span class="p-2 bg-teal-50 text-teal-600 rounded-lg">👥</span>
+          <span>Team Members</span>
+        </div>
+        <span class="font-bold text-teal-600" x-text="`${user?.teamCount || 0} Members`"></span>
+      </a>
+    </div>
+
+    <!-- SIGN OUT ACTION -->
+    <button @click="handleLogout()" class="w-full bg-white text-red-500 font-semibold py-3.5 rounded-2xl text-xs border border-gray-200 hover:bg-red-50 transition shadow-sm">
+      Log Out of Account
+    </button>
+
+  </main>
+
+  <!-- ACCOUNT INFO MODAL -->
+  <div x-show="showModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" x-cloak>
+    <div class="bg-white w-full max-w-lg rounded-2xl p-6 space-y-5 shadow-xl max-h-[90vh] overflow-y-auto" @click.away="showModal = false">
+      
+      <!-- HEADER -->
+      <div class="flex justify-between items-center border-b pb-4">
+        <h3 class="font-bold text-gray-900 text-lg">My profile</h3>
+        <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 font-bold text-base w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition">✕</button>
+      </div>
+
+      <!-- SUCCESS / ERROR ALERTS -->
+      <div x-show="modalError" x-text="modalError" class="p-2.5 bg-red-50 text-red-600 text-xs rounded-xl text-center" x-cloak></div>
+      <div x-show="modalSuccess" x-text="modalSuccess" class="p-2.5 bg-green-50 text-green-600 text-xs rounded-xl text-center" x-cloak></div>
+
+      <!-- PROFILE FORM GRID LAYOUT -->
+      <form @submit.prevent="updateAccountInfo()" class="space-y-4 text-xs">
+        <div class="flex flex-col sm:flex-row gap-6 items-start">
+          
+          <!-- LEFT SIDE: AVATAR & EDIT BUTTON -->
+          <div class="flex flex-col items-center gap-3 shrink-0 mx-auto sm:mx-0">
+            <div class="w-24 h-24 rounded-full overflow-hidden bg-teal-50 border-2 border-teal-100 flex items-center justify-center font-bold text-teal-800 shadow-sm">
+              <template x-if="editForm.avatarUrl">
+                <img :src="editForm.avatarUrl" class="w-full h-full object-cover">
+              </template>
+              <template x-if="!editForm.avatarUrl">
+                <span class="text-2xl">👤</span>
+              </template>
+            </div>
+            
+            <!-- Hidden file input triggered by Edit button -->
+            <input type="file" id="avatarFileInput" accept="image/*" @change="uploadAvatar($event)" class="hidden">
+            <button type="button" @click="document.getElementById('avatarFileInput').click()" class="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl text-xs hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 transition shadow-sm flex items-center gap-1.5">
+              <span>🖼️</span> Edit
+            </button>
+          </div>
+
+          <!-- RIGHT SIDE: FORM FIELDS -->
+          <div class="flex-1 w-full space-y-3">
+            <div>
+              <label class="block text-gray-500 font-medium mb-1">Full Name</label>
+              <div class="grid grid-cols-2 gap-2">
+                <input type="text" x-model="editForm.firstName" placeholder="First Name" required
+                       class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-xs text-gray-800">
+                <input type="text" x-model="editForm.lastName" placeholder="Last Name" required
+                       class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-xs text-gray-800">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-gray-500 font-medium mb-1">Phone Number (Main)</label>
+              <input type="text" x-model="editForm.phone" placeholder="+63 ..." required
+                     class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-xs text-gray-800 font-mono">
+            </div>
+
+            <div>
+              <label class="block text-gray-500 font-medium mb-1">Database Referral Code</label>
+              <div class="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl border border-gray-200">
+                <span class="font-mono font-bold text-teal-600 text-xs" x-text="user ? (user.ref_code || '') : ''"></span>
+                <button type="button" @click="copyCode()" class="text-[11px] bg-teal-600 text-white px-2.5 py-1 rounded-lg font-semibold hover:bg-teal-700 transition">
+                  <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- FOOTER BUTTONS -->
+        <div class="flex items-center justify-end gap-2 pt-4 border-t">
+          <button type="button" @click="showModal = false" class="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition">
+            Close
+          </button>
+          <button type="submit" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition shadow-sm">
+            Save
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-3 z-20 max-w-md mx-auto shadow-lg">
+    <a href="dashboard.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-teal-600 transition">
+      <span class="text-base">🏠</span>
+      <span class="mt-0.5">Home</span>
+    </a>
+    <a href="tasks.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-teal-600 transition">
+      <span class="text-base">💼</span>
+      <span class="mt-0.5">Job</span>
+    </a>
+    <a href="records.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-teal-600 transition">
+      <span class="text-base">💳</span>
+      <span class="mt-0.5">Records</span>
+    </a>
+    <a href="account.html" class="flex flex-col items-center text-xs font-bold text-teal-600 transition">
+      <span class="text-base">👤</span>
+      <span class="mt-0.5">Account</span>
+    </a>
+  </nav>
+
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('accountPage', () => ({
+        user: null,
+        copied: false,
+        showModal: false,
+        modalError: '',
+        modalSuccess: '',
+        editForm: {
+          firstName: '',
+          lastName: '',
+          phone: '',
+          avatarUrl: ''
+        },
+        
+        async initAccount() {
+          this.user = await DB.getCurrentUser();
+          if (!this.user) {
+            window.location.href = '../login.html';
+            return;
+          }
+
+          if (this.user.ref_code) {
+            try {
+              const { count, error } = await supabaseClient
+                .from('users')
+                .select('*', { count: 'exact', head: true })
+                .eq('referred_by', this.user.ref_code);
+
+              if (!error && count !== null) {
+                this.user.teamCount = count;
+              } else {
+                this.user.teamCount = 0;
+              }
+            } catch (e) {
+              console.error("Error fetching team count:", e);
+              this.user.teamCount = 0;
+            }
+          } else {
+            this.user.teamCount = 0;
+          }
+        },
+        
+        openModal() {
+          this.modalError = '';
+          this.modalSuccess = '';
+          if (this.user) {
+            this.editForm.firstName = this.user.first_name || '';
+            this.editForm.lastName = this.user.last_name || '';
+            this.editForm.phone = this.user.phone || '';
+            this.editForm.avatarUrl = this.user.avatar_url || '';
+          }
+          this.showModal = true;
+        },
+
+        uploadAvatar(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+          
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            this.editForm.avatarUrl = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        },
+        
+        copyCode() {
+          const codeToCopy = this.user ? (this.user.ref_code || '') : '';
+          if (codeToCopy) {
+            navigator.clipboard.writeText(codeToCopy);
+            this.copied = true;
+            setTimeout(() => this.copied = false, 2000);
+          }
+        },
+        
+        async updateAccountInfo() {
+          this.modalError = '';
+          this.modalSuccess = '';
+
+          try {
+            if (!this.user || !this.user.id) {
+              throw new Error("No active user found. Please log in again.");
+            }
+
+            // Direct update to the users table using the stored user ID
+            const { error } = await supabaseClient.from('users').update({ 
+              first_name: this.editForm.firstName,
+              last_name: this.editForm.lastName,
+              phone: this.editForm.phone,
+              avatar_url: this.editForm.avatarUrl
+            }).eq('id', this.user.id);
+
+            if (error) throw error;
+
+            this.modalSuccess = "Profile updated successfully!";
+            
+            // Instantly sync the local user state and update localStorage
+            this.user.first_name = this.editForm.firstName;
+            this.user.last_name = this.editForm.lastName;
+            this.user.phone = this.editForm.phone;
+            this.user.avatar_url = this.editForm.avatarUrl;
+            
+            localStorage.setItem('currentUser', JSON.stringify(this.user));
+
+            setTimeout(() => {
+              this.modalSuccess = '';
+              this.showModal = false;
+            }, 1200);
+
+          } catch (err) {
+            console.error("Profile update error:", err);
+            this.modalError = err.message || "Failed to update profile. Please try again.";
+          }
+        },
+        
+        async handleLogout() {
+          await DB.logout();
+          window.location.href = '../login.html';
+        }
+      }));
+    });
+  </script>
+</body>
+</html>

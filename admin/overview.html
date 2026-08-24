@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Overview - PortalStore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans min-h-screen pb-24" x-data="overviewData()" x-init="init()" x-cloak>
+
+  <header class="bg-gray-900 text-white sticky top-0 z-20 shadow-md">
+    <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center font-bold text-white text-sm">📊</span>
+        <div>
+          <h1 class="font-bold text-sm tracking-wide">PortalStore Overview</h1>
+          <p class="text-[10px] text-gray-400">Analytics & Platform Metrics</p>
+        </div>
+      </div>
+      <a href="dashboard.html" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3.5 py-2 rounded-xl transition font-semibold">← Dashboard</a>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+    <div class="grid grid-cols-2 gap-4">
+      
+      <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 space-y-2 flex flex-col justify-between">
+        <div>
+          <p class="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Platform Users</p>
+          <p class="text-2xl font-black text-gray-800 mt-1" x-text="users.length"></p>
+        </div>
+        <div class="flex gap-2 pt-1 flex-wrap">
+          <span class="text-[9px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md" x-text="`${activeUsersCount} Active`"></span>
+          <span class="text-[9px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-md" x-text="`${inactiveUsersCount} Inactive`"></span>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 space-y-1 flex flex-col justify-between">
+        <div>
+          <p class="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Pending Approvals</p>
+          <p class="text-2xl font-black text-amber-600 mt-1" x-text="pendingCount"></p>
+        </div>
+        <p class="text-[9px] text-amber-600 font-semibold pt-1">Awaiting review (Top-ups / Withdrawals)</p>
+      </div>
+
+      <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 space-y-1 col-span-2">
+        <p class="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Total Available Balance</p>
+        <p class="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight" x-text="`₱${totalUserBalance}`"></p>
+        <p class="text-[10px] text-gray-400">Cumulative wallet balances</p>
+      </div>
+
+      <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 space-y-1 col-span-2">
+        <p class="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Total Available to Withdraw</p>
+        <p class="text-xl sm:text-2xl font-black text-teal-600 tracking-tight" x-text="`₱${totalWithdrawable}`"></p>
+        <p class="text-[10px] text-gray-400">Total withdrawable user funds</p>
+      </div>
+
+    </div>
+
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+        <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider">Recent System Transactions</h2>
+        <span class="text-xs text-gray-400 font-semibold" x-text="`${transactions.length} total records`"></span>
+      </div>
+
+      <template x-if="transactions.length === 0">
+        <p class="text-xs text-gray-400 py-8 text-center">No platform transaction records found yet.</p>
+      </template>
+
+      <div class="space-y-2.5">
+        <template x-for="tx in transactions.slice(0, 5)" :key="tx.id">
+          <div class="bg-gray-50 p-3.5 rounded-2xl border border-gray-100 flex items-center justify-between">
+            <div class="space-y-0.5">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase" 
+                      :class="tx.type === 'deposit' || tx.type === 'Deposit' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'" 
+                      x-text="tx.type"></span>
+                <span class="text-xs font-bold text-gray-800" x-text="`₱${tx.amount}`"></span>
+              </div>
+              <p class="text-[11px] text-gray-500 font-medium" x-text="tx.ref_number ? `Ref: ${tx.ref_number}` : ''"></p>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                    :class="tx.status === 'Completed' || tx.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' : (tx.status === 'Pending' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600')"
+                    x-text="tx.status"></span>
+              <p class="text-[9px] text-gray-400 font-medium mt-1" x-text="formatDate(tx.created_at)"></p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </main>
+
+  <!-- ADMIN BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-3 z-20 max-w-md mx-auto shadow-lg">
+    <a href="dashboard.html" class="flex flex-col items-center text-[10px] font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">🏠</span>
+      <span class="mt-0.5">Dashboard</span>
+    </a>
+    <a href="overview.html" class="flex flex-col items-center text-[10px] font-bold text-emerald-600 transition">
+      <span class="text-base">📊</span>
+      <span class="mt-0.5">Overview</span>
+    </a>
+    <a href="dashboard.html" class="flex flex-col items-center text-[10px] font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">💳</span>
+      <span class="mt-0.5">Requests</span>
+    </a>
+    <a href="dashboard.html" class="flex flex-col items-center text-[10px] font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">👥</span>
+      <span class="mt-0.5">Users</span>
+    </a>
+    <a href="bank.html" class="flex flex-col items-center text-[10px] font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">🏦</span>
+      <span class="mt-0.5">Bank</span>
+    </a>
+  </nav>
+
+  <script>
+    function overviewData() {
+      return {
+        users: [],
+        transactions: [],
+
+        get pendingCount() {
+          return this.transactions.filter(t => t.status === 'Pending').length;
+        },
+
+        get totalUserBalance() {
+          const total = this.users.reduce((sum, u) => sum + parseFloat(u.balance || 0), 0);
+          return total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        get totalWithdrawable() {
+          const total = this.users.reduce((sum, u) => sum + parseFloat(u.available_balance || 0), 0);
+          return total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        get activeUsersCount() {
+          return this.users.filter(u => parseFloat(u.balance || 0) > 0 || parseFloat(u.available_balance || 0) > 0).length;
+        },
+
+        get inactiveUsersCount() {
+          return this.users.length - this.activeUsersCount;
+        },
+
+        async init() {
+          if (!DB.isAdminLoggedIn()) {
+            window.location.href = '../login.html';
+            return;
+          }
+          try {
+            this.users = await DB.getAllUsers() || [];
+            this.transactions = await DB.getAllTransactions() || [];
+          } catch (e) {
+            console.error("Failed to load overview analytics data:", e);
+          }
+        },
+
+        formatDate(isoString) {
+          if (!isoString) return '';
+          return new Date(isoString).toLocaleDateString() + ' ' + new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+      }
+    }
+  </script>
+</body>
+</html>

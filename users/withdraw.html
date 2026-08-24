@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Withdrawal - PortalStore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans pb-24" 
+      x-data="withdrawPageData()" 
+      x-init="init()"
+      x-cloak>
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-gray-100 sticky top-0 z-20">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="dashboard.html" class="text-xs text-emerald-600 font-bold flex items-center gap-1 hover:underline">
+        ← Back
+      </a>
+      <span class="font-bold text-gray-800 text-base">Withdrawal Portal</span>
+      <div class="w-8"></div>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- BALANCE CARD -->
+    <div class="bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800 text-white p-5 rounded-2xl shadow-md space-y-3">
+      <div class="flex justify-between items-center">
+        <div>
+          <p class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">AVAILABLE TO WITHDRAW</p>
+          <p class="text-2xl font-black text-white mt-0.5">
+            ₱<span x-text="balanceInfo.withdrawableBalance"></span>
+          </p>
+        </div>
+        <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-xl">
+          💳
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-emerald-600/50 text-[10px] text-emerald-100 flex justify-between font-medium">
+        <span>Total Balance: ₱<span x-text="balanceInfo.balance"></span></span>
+        <span>Processing: <strong class="text-white">1-24 Hours</strong></span>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION ALERTS -->
+    <div x-show="errorMessage" x-text="errorMessage" class="p-3 bg-red-50 text-red-600 text-xs rounded-xl text-center border border-red-100 font-medium" x-cloak></div>
+    <div x-show="successMessage" x-text="successMessage" class="p-3 bg-green-50 text-green-600 text-xs rounded-xl text-center border border-green-100 font-medium" x-cloak></div>
+
+    <!-- WITHDRAWAL FORM -->
+    <form @submit.prevent="handleWithdraw()" class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+      
+      <!-- AMOUNT INPUT -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-gray-700 block">Withdrawal Amount (₱)</label>
+        <div class="relative">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">₱</span>
+          <input type="number" 
+                 step="0.01" 
+                 x-model="amount" 
+                 placeholder="0.00" 
+                 required
+                 class="w-full pl-8 pr-16 py-3 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-emerald-500 transition">
+          <button type="button" 
+                  @click="amount = balanceInfo.withdrawableBalance"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
+            MAX
+          </button>
+        </div>
+      </div>
+
+      <!-- FEE BREAKDOWN CARD -->
+      <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs space-y-1.5" x-show="parseFloat(amount) > 0">
+        <div class="flex justify-between text-slate-500">
+          <span>Processing Fee (5%):</span>
+          <span class="font-semibold text-slate-700">₱<span x-text="calculation.fee"></span></span>
+        </div>
+        <div class="flex justify-between text-slate-800 font-bold border-t border-slate-200/60 pt-1.5">
+          <span>You Will Receive:</span>
+          <span class="text-emerald-600 text-sm">₱<span x-text="calculation.receive"></span></span>
+        </div>
+      </div>
+
+      <!-- SAVED BANK / PAYOUT CHANNEL SELECTION -->
+      <div class="space-y-1.5">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold text-gray-700 block">Select Saved Bank Account</label>
+          <a href="account.html" class="text-[10px] font-bold text-emerald-600 hover:underline">+ Manage Accounts</a>
+        </div>
+
+        <template x-if="savedAccounts.length > 0">
+          <select x-model="selectedAccountId" required class="w-full p-3 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-none focus:border-emerald-500 bg-white">
+            <option value="" disabled selected>-- Choose Payout Channel --</option>
+            <template x-for="acc in savedAccounts" :key="acc.id">
+              <option :value="acc.id" x-text="`${acc.bankName} - ${acc.accountNumber} (${acc.accountName})`"></option>
+            </template>
+          </select>
+        </template>
+
+        <template x-if="savedAccounts.length === 0">
+          <div class="p-3 bg-amber-50 border border-amber-100 rounded-xl text-[11px] text-amber-700 space-y-1 font-medium">
+            <p class="font-bold">No saved bank details found!</p>
+            <p>Please link a bank or e-wallet account in your profile before requesting a withdrawal.</p>
+            <a href="account.html" class="inline-block mt-1 font-bold text-emerald-600 hover:underline">Go to Account Settings →</a>
+          </div>
+        </template>
+      </div>
+
+      <!-- SELECTED ACCOUNT SUMMARY BADGE -->
+      <template x-if="selectedAccount">
+        <div class="p-3 bg-gray-50 border border-gray-100 rounded-xl text-xs space-y-1">
+          <p class="text-[10px] text-gray-400 font-bold uppercase">Payout Destination</p>
+          <div class="flex justify-between font-bold text-gray-800">
+            <span x-text="selectedAccount.bankName"></span>
+            <span class="text-emerald-600" x-text="selectedAccount.accountNumber"></span>
+          </div>
+          <p class="text-gray-500 text-[11px]" x-text="`Account Holder: ${selectedAccount.accountName}`"></p>
+        </div>
+      </template>
+
+      <!-- SUBMIT BUTTON -->
+      <button type="submit" 
+              :disabled="loading || savedAccounts.length === 0 || !selectedAccountId"
+              class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-sm transition disabled:opacity-50">
+        <span x-text="loading ? 'Submitting Request...' : 'Confirm Withdrawal'"></span>
+      </button>
+
+    </form>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-3 z-20 max-w-md mx-auto shadow-md">
+    <a href="dashboard.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">🏠</span>
+      <span class="mt-0.5">Home</span>
+    </a>
+    <a href="tasks.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">💼</span>
+      <span class="mt-0.5">Job</span>
+    </a>
+    <a href="records.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">💳</span>
+      <span class="mt-0.5">Records</span>
+    </a>
+    <a href="account.html" class="flex flex-col items-center text-xs font-medium text-gray-400 hover:text-emerald-600 transition">
+      <span class="text-base">👤</span>
+      <span class="mt-0.5">Account</span>
+    </a>
+  </nav>
+
+  <script>
+    function withdrawPageData() {
+      return {
+        currentUser: null,
+        balanceInfo: { balance: '0.00', withdrawableBalance: '0.00' },
+        savedAccounts: [],
+        selectedAccountId: '',
+        amount: '',
+        loading: false,
+        errorMessage: '',
+        successMessage: '',
+        
+        get selectedAccount() {
+          return this.savedAccounts.find(acc => acc.id === this.selectedAccountId) || null;
+        },
+
+        // Automatically compute 5% fee and net amount user will receive
+        get calculation() {
+          const amt = parseFloat(this.amount) || 0;
+          const fee = amt * 0.05;
+          const receive = amt - fee;
+          return {
+            fee: fee.toFixed(2),
+            receive: receive > 0 ? receive.toFixed(2) : '0.00'
+          };
+        },
+
+        async init() {
+          try {
+            // Use DB.getCurrentUser() to safely check auth state without unwanted logouts
+            this.currentUser = await DB.getCurrentUser();
+            if (!this.currentUser) {
+              window.location.href = '../login.html';
+              return;
+            }
+
+            this.balanceInfo = {
+              balance: Number(this.currentUser.balance || 0).toFixed(2),
+              withdrawableBalance: Number(this.currentUser.available_balance || 0).toFixed(2)
+            };
+            
+            const bankData = await DB.getBankDetails();
+            if (bankData && bankData.length > 0) {
+              this.savedAccounts = bankData.map(acc => ({
+                id: acc.id,
+                bankName: acc.account_type || acc.accountType,
+                accountName: acc.account_name || acc.accountName,
+                accountNumber: acc.account_number || acc.accountNumber
+              }));
+            }
+
+            if (this.savedAccounts.length > 0) {
+              this.selectedAccountId = this.savedAccounts[0].id;
+            }
+          } catch (e) {
+            console.error('Initialization error:', e);
+            this.errorMessage = 'Failed to load user session data.';
+          }
+        },
+
+        async handleWithdraw() {
+          this.errorMessage = '';
+          this.successMessage = '';
+
+          const withdrawAmount = parseFloat(this.amount) || 0;
+          const maxWithdrawable = parseFloat(this.balanceInfo.withdrawableBalance) || 0;
+
+          if (withdrawAmount < 100) {
+            this.errorMessage = 'The minimum withdrawal amount is ₱100.00.';
+            return;
+          }
+
+          if (withdrawAmount > maxWithdrawable) {
+            this.errorMessage = 'Withdrawal amount exceeds your available withdrawable balance.';
+            return;
+          }
+
+          if (!this.selectedAccount) {
+            this.errorMessage = 'Please select a valid saved bank account.';
+            return;
+          }
+
+          this.loading = true;
+
+          try {
+            if (!this.currentUser) throw new Error("Session expired.");
+
+            const netReceiveAmount = parseFloat(this.calculation.receive);
+
+            const { error: insertError } = await supabaseClient
+              .from('transactions')
+              .insert([{
+                user_id: this.currentUser.id,
+                type: 'Withdrawal',
+                amount: netReceiveAmount, // Records the net amount received after fee
+                method: this.selectedAccount.bankName,
+                ref_number: this.selectedAccount.accountNumber,
+                status: 'Pending'
+              }]);
+
+            if (insertError) throw new Error(insertError.message);
+
+            const newAvailableBalance = maxWithdrawable - withdrawAmount;
+            const { error: updateError } = await supabaseClient
+              .from('users')
+              .update({ available_balance: newAvailableBalance })
+              .eq('id', this.currentUser.id);
+
+            if (updateError) throw new Error(updateError.message);
+
+            this.loading = false;
+            this.successMessage = 'Withdrawal request submitted successfully! Redirecting to records...';
+            
+            setTimeout(() => {
+              window.location.href = 'records.html';
+            }, 1200);
+
+          } catch (err) {
+            this.loading = false;
+            this.errorMessage = err.message || 'An error occurred during withdrawal.';
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>

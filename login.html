@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - PortalStore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Make sure this path correctly points to your supabase.js file -->
+  <script src="supabase.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen flex flex-col selection:bg-teal-500 selection:text-white" x-data="loginData()" x-cloak>
+
+  <!-- HEADER -->
+  <header class="bg-white/85 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-20">
+    <div class="max-w-md mx-auto px-5 py-3.5 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-2.5">
+        <div class="w-9 h-9 bg-gradient-to-tr from-teal-600 to-teal-500 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-md shadow-teal-500/20">
+          P
+        </div>
+        <span class="font-bold text-slate-800 text-base tracking-tight">PortalStore</span>
+      </a>
+      <a href="signup.html" class="text-teal-600 text-xs font-bold hover:underline">Register</a>
+    </div>
+  </header>
+
+  <!-- MAIN LOGIN AREA -->
+  <main class="max-w-md w-full mx-auto p-5 my-auto space-y-6">
+    
+    <div class="text-center">
+      <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Welcome Back</h1>
+      <p class="text-slate-500 text-xs mt-2">Sign in to your dashboard to continue.</p>
+    </div>
+
+    <!-- Error Alert -->
+    <div x-show="errorMessage" x-transition class="p-3 bg-red-50 text-red-600 text-xs rounded-xl text-center border border-red-100 font-bold">
+      <span x-text="errorMessage"></span>
+    </div>
+
+    <form @submit.prevent="handleLogin()" class="bg-white p-6 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-4">
+      
+      <!-- Identifier (Phone/Username) -->
+      <div>
+        <label class="text-xs font-bold text-slate-700 block mb-1.5" x-text="isAdminMode ? 'Admin Username' : 'Phone Number'"></label>
+        <input :type="isAdminMode ? 'text' : 'tel'" 
+               x-model="form.identifier" 
+               required 
+               class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition"
+               :placeholder="isAdminMode ? 'Enter admin username' : 'Enter your phone number'">
+      </div>
+
+      <!-- Password -->
+      <div>
+        <label class="text-xs font-bold text-slate-700 block mb-1.5">Password</label>
+        <input type="password" 
+               x-model="form.password" 
+               required 
+               class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition"
+               placeholder="Enter your password">
+      </div>
+
+      <!-- Options -->
+      <div class="flex items-center justify-between pt-1">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" x-model="isAdminMode" class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
+          <span class="text-[11px] font-bold text-slate-600">Admin Login</span>
+        </label>
+        <button type="button" @click="showForgotModal = true" class="text-[11px] font-bold text-teal-600 hover:underline">Forgot Password?</button>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" 
+              :disabled="loading"
+              class="w-full bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-md shadow-teal-600/20 transition duration-150 disabled:opacity-50">
+        <span x-text="loading ? 'Authenticating...' : 'Sign In'"></span>
+      </button>
+    </form>
+
+    <p class="text-center text-xs text-slate-500 font-medium">
+      Don't have an account? <a href="signup.html" class="text-teal-600 font-bold hover:underline">Create one</a>
+    </p>
+  </main>
+
+  <!-- FORGOT PASSWORD MODAL -->
+  <div x-show="showForgotModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div @click.away="showForgotModal = false" class="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl relative">
+      <button @click="showForgotModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">✕</button>
+      
+      <div class="text-center space-y-2">
+        <div class="w-12 h-12 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center mx-auto text-xl">🔒</div>
+        <h3 class="font-bold text-slate-800">Reset Password</h3>
+        <p class="text-xs text-slate-500">Enter your registered phone number to request a password reset from the admin.</p>
+      </div>
+
+      <div x-show="forgotError" x-text="forgotError" class="p-2.5 bg-red-50 text-red-600 text-[11px] rounded-xl text-center border border-red-100 font-bold"></div>
+      <div x-show="forgotSuccess" x-text="forgotSuccess" class="p-2.5 bg-green-50 text-green-600 text-[11px] rounded-xl text-center border border-green-100 font-bold"></div>
+
+      <div class="space-y-3">
+        <input type="tel" x-model="forgotIdentifier" placeholder="Phone Number" class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm focus:outline-none focus:border-teal-500">
+        <button @click="submitForgotRequest()" :disabled="forgotLoading" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-2xl text-xs transition disabled:opacity-50">
+          <span x-text="forgotLoading ? 'Submitting...' : 'Request Reset'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- YOUR EXACT LOGIC SCRIPT -->
+  <script>
+    function loginData() {
+      return {
+        errorMessage: '',
+        isAdminMode: false,
+        loading: false,
+        form: { identifier: '', password: '' },
+
+        // Modal states
+        showForgotModal: false,
+        forgotIdentifier: '',
+        forgotLoading: false,
+        forgotError: '',
+        forgotSuccess: '',
+
+        async handleLogin() {
+          this.errorMessage = '';
+          this.loading = true;
+          
+          if (this.isAdminMode) {
+            const res = await DB.loginAdmin(this.form.identifier, this.form.password);
+            this.loading = false;
+
+            if (!res.success) {
+              this.errorMessage = res.message || 'Invalid admin credentials.';
+              return;
+            }
+
+            window.location.href = 'admin/dashboard.html';
+            return;
+          }
+
+          const res = await DB.loginUser(this.form.identifier, this.form.password);
+          this.loading = false;
+
+          if (!res.success) {
+            this.errorMessage = res.message || 'Invalid login credentials.';
+            return;
+          }
+
+          window.location.href = 'users/dashboard.html';
+        },
+
+        async submitForgotRequest() {
+          this.forgotError = '';
+          this.forgotSuccess = '';
+          const identifier = this.forgotIdentifier.trim();
+
+          if (!identifier) {
+            this.forgotError = 'Please enter your phone number.';
+            return;
+          }
+
+          this.forgotLoading = true;
+          
+          try {
+            // 1. Verify if user exists in database using limit(1) to avoid PGRST116 multiple rows error
+            const { data: usersData, error: queryError } = await supabaseClient
+              .from('users')
+              .select('id, phone')
+              .eq('phone', identifier)
+              .limit(1);
+
+            if (queryError) {
+              console.error("Database query error:", queryError);
+              this.forgotError = 'Verification failed. Please check connection.';
+              this.forgotLoading = false;
+              return;
+            }
+
+            if (!usersData || usersData.length === 0) {
+              this.forgotError = 'No account found with this phone number.';
+              this.forgotLoading = false;
+              return;
+            }
+
+            const userData = usersData[0];
+
+            // 2. Insert password reset request into the existing password_resets table
+            const { error: insertError } = await supabaseClient
+              .from('password_resets')
+              .insert([
+                { 
+                  phone: identifier,
+                  user_id: userData.id,
+                  status: 'Pending'
+                }
+              ]);
+
+            this.forgotLoading = false;
+            
+            if (insertError) {
+              console.error("Supabase Insert Error:", insertError);
+              this.forgotError = 'Failed to submit request: ' + insertError.message;
+            } else {
+              this.forgotSuccess = 'Password reset request sent to admin!';
+              setTimeout(() => {
+                this.showForgotModal = false;
+                this.forgotIdentifier = '';
+              }, 2000);
+            }
+          } catch (err) {
+            this.forgotLoading = false;
+            this.forgotError = 'An unexpected error occurred.';
+            console.error(err);
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
