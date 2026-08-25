@@ -1,0 +1,9 @@
+{
+	"appId": "com.portalstore.app",
+	"appName": "PortalStore",
+	"webDir": "www",
+	"server": {
+		"url": "https://order-ap.vercel.app/",
+		"cleartext": true
+	}
+}
