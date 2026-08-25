@@ -26,7 +26,7 @@ jobs:
         run: npm install
 
       - name: Sync Capacitor Android
-        run: npx @capacitor/cli sync android
+        run: node ./node_modules/@capacitor/cli/bin/capacitor sync android
 
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
